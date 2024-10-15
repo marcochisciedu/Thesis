@@ -1,0 +1,11 @@
+# environment
+venv/
+.env
+
+wandb/
+
+#datasets
+cifar10/
+
+#models
+model.pth
