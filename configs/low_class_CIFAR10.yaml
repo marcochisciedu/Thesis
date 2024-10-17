@@ -1,0 +1,8 @@
+# percentage of CIFAR10 to use
+percentage : 100
+
+# which classes have a lower percentage of images
+low_class_list: [1,2]
+low_percentage: 10
+
+epochs: 9.9

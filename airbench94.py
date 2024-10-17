@@ -6,6 +6,7 @@ import os
 import sys
 import wandb
 import uuid
+import argparse, yaml
 from math import ceil
 from dotenv import load_dotenv
 
@@ -54,6 +55,11 @@ hyp = {
         'scaling_factor': 1/9,
         'tta_level': 2,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
     },
+    'data': {
+        'percentage':100,           # percentage of CIFAR10 to use
+        'low_classes': None,        # which classes get a lower percentage of data
+        'low_percentage': 10,       # percentage of the class to take
+    }
 }
 
 #############################################
@@ -90,7 +96,8 @@ def batch_crop(images, crop_size):
 
 class CifarLoader:
 
-    def __init__(self, path, train=True, batch_size=500, aug=None, drop_last=None, shuffle=None, gpu=0):
+    def __init__(self, path, train=True, batch_size=500, aug=None, drop_last=None, shuffle=None, gpu=0, 
+                 percentage = 100, list_low_classes = None, low_percentage = 10):
         data_path = os.path.join(path, 'train.pt' if train else 'test.pt')
         if not os.path.exists(data_path):
             dset = torchvision.datasets.CIFAR10(path, download=True, train=train)
@@ -99,7 +106,29 @@ class CifarLoader:
             torch.save({'images': images, 'labels': labels, 'classes': dset.classes}, data_path)
 
         data = torch.load(data_path, map_location=torch.device(gpu))
-        self.images, self.labels, self.classes = data['images'], data['labels'], data['classes']
+        
+        # Check if the whole dataset is used or not
+        if percentage >= 100 or percentage<0:
+            self.images, self.labels, self.classes = data['images'], data['labels'], data['classes']
+        else:
+            num_imgs = int(data['images'].size()[0]*percentage/100)
+            imgs_per_label = [int(num_imgs/len(data['classes']))]*(len(data['classes']))
+            # check if some classes need a different percentage of images
+            if list_low_classes is not None:
+                for j in list_low_classes:
+                    imgs_per_label[j] = int(data['images'].size()[0]*low_percentage/(100*len(data['classes'])))
+            self.images= torch.empty((0,data['images'].size()[1], data['images'].size()[2], data['images'].size()[3]),dtype=torch.uint8, device=gpu)
+            self.labels=torch.empty((0),dtype=torch.uint8, device=gpu)
+            for i in range(len(data['images'])):
+                if imgs_per_label[data['labels'][i]] > 0:
+                    self.labels = torch.cat((self.labels,data['labels'][i].reshape(1)), 0)
+                    self.images= torch.cat((self.images,data['images'][i].unsqueeze(0) ),0)
+                    imgs_per_label[data['labels'][i]] -= 1
+                elif all(num == 0 for num in imgs_per_label): 
+                    break
+        
+            self.classes = data['classes']
+
         # It's faster to load+process uint8 data than to load preprocessed fp16 data
         self.images = (self.images.half() / 255).permute(0, 3, 1, 2).to(memory_format=torch.channels_last)
 
@@ -318,9 +347,10 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "CIFAR10_run" +str(run),
+        name = "CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+         +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
-
+    
     batch_size = hyp['opt']['batch_size']
     epochs = hyp['opt']['train_epochs']
     momentum = hyp['opt']['momentum']
@@ -335,7 +365,8 @@ def main(run):
 
     loss_fn = nn.CrossEntropyLoss(label_smoothing=hyp['opt']['label_smoothing'], reduction='none')
     test_loader = CifarLoader('cifar10', train=False, batch_size=2000)
-    train_loader = CifarLoader('cifar10', train=True, batch_size=batch_size, aug=hyp['aug'])
+    train_loader = CifarLoader('cifar10', train=True, batch_size=batch_size, aug=hyp['aug'], percentage = hyp['data']['percentage'],
+                                list_low_classes= hyp['data']['low_classes'], low_percentage= hyp['data']['low_percentage'])
     if run == 'warmup':
         # The only purpose of the first run is to warmup, so we can use dummy data
         train_loader.labels = torch.randint(0, 10, size=(len(train_loader.labels),), device=train_loader.labels.device)
@@ -437,7 +468,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                "CIFAR10_run" +str(run), type="model",
+                "CIFAR10_"+ str(hyp['data']['percentage'])+ "percent_run" +str(run), type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
 
@@ -462,13 +493,29 @@ if __name__ == "__main__":
 
     wandb.login(key= WANDB_API_KEY, verify=True)
 
+    # Select config
+    parser = argparse.ArgumentParser(description='Training CIFAR10')
+    parser.add_argument("-c", "--config_path",
+                        help="path of the experiment yaml",
+                        default=os.path.join(os.getcwd(), "configs/half_CIFAR10.yaml"), 
+                        type=str)
+    params = parser.parse_args()
+
+    with open(params.config_path, 'r') as stream:
+        loaded_params = yaml.safe_load(stream)
+    # Modify the default hyperparameters
+    hyp['data']['percentage'] = loaded_params['percentage']
+    hyp['opt']['train_epochs'] = loaded_params['epochs']
+    hyp['data']['low_classes'] = loaded_params['low_class_list']
+    hyp['data']['low_percentage'] = loaded_params['low_percentage']
+
     # How many times the main is runned
     accs = torch.tensor([main(run) for run in range(5)])
 
     # Log mean and std
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Final log",
+        name = "Final log "+ str(hyp['data']['percentage'])+ " percent",
         config=hyp)
     final_metrics = {'mean': accs.mean(), 'std': accs.std()}
     wandb.log({**final_metrics})
