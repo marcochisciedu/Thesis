@@ -468,7 +468,8 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                "CIFAR10_"+ str(hyp['data']['percentage'])+ "percent_run" +str(run), type="model",
+                 "CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+                +str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
 
@@ -515,7 +516,8 @@ if __name__ == "__main__":
     # Log mean and std
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Final log "+ str(hyp['data']['percentage'])+ " percent",
+        name = "Final log "+  str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+                +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     final_metrics = {'mean': accs.mean(), 'std': accs.std()}
     wandb.log({**final_metrics})

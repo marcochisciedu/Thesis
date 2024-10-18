@@ -4,6 +4,8 @@ venv/
 
 wandb/
 
+__pycache__/
+
 #datasets
 cifar10/
 
