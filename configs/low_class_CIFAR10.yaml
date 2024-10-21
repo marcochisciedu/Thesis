@@ -3,6 +3,6 @@ percentage : 100
 
 # which classes have a lower percentage of images
 low_class_list: [1,2]
-low_percentage: 10
+low_percentage: 5
 
 epochs: 9.9

@@ -108,7 +108,7 @@ class CifarLoader:
         data = torch.load(data_path, map_location=torch.device(gpu))
         
         # Check if the whole dataset is used or not
-        if percentage >= 100 or percentage<0:
+        if (percentage >= 100 or percentage<0) and list_low_classes is None:
             self.images, self.labels, self.classes = data['images'], data['labels'], data['classes']
         else:
             num_imgs = int(data['images'].size()[0]*percentage/100)
@@ -249,7 +249,8 @@ def make_net():
         ConvGroup(widths['block2'], widths['block3'], batchnorm_momentum),
         nn.MaxPool2d(3),
         Flatten(),
-        nn.Linear(widths['block3'], 10, bias=False),
+        nn.Linear(widths['block3'], 5, bias=False),
+        nn.Linear(5, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
         Mul(hyp['net']['scaling_factor']),
     )
     net[0].weight.requires_grad = False
@@ -347,7 +348,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "BottleneckCIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -468,7 +469,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+                 "CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])+ "percent_"
                 +str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
