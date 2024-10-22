@@ -2,3 +2,7 @@ torch
 torchvision
 wandb
 python-dotenv
+scipy
+matplotlib
+tqdm
+gurobipy
