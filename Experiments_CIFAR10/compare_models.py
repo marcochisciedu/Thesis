@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 import torch
 
 from airbench94 import CifarLoader, make_net, evaluate
+
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip_rate import negative_flip_rate, improved_negative_flip_rate
 
 hyp = {
@@ -21,7 +24,6 @@ def main():
     load_dotenv()
 
     # Setup wandb run
-    WANDB_USERNAME = os.getenv('WANDB_USERNAME')
     WANDB_API_KEY = os.getenv('WANDB_API_KEY')
     WANDB_PROJECT = os.getenv('WANDB_PROJECT')
 

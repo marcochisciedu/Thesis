@@ -5,7 +5,6 @@
 import os
 import sys
 import wandb
-import uuid
 import argparse, yaml
 from math import ceil
 from dotenv import load_dotenv
@@ -15,6 +14,9 @@ from torch import nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as T
+
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 
 torch.backends.cudnn.benchmark = True
 

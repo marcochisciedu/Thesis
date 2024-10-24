@@ -5,11 +5,13 @@ import numpy as np
 from dotenv import load_dotenv
 import pandas
 
+from airbench94 import CifarLoader, make_net, evaluate
+
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from unargmaxability import StolenProbabilitySearch, ApproxAlgorithms, ExactAlgorithms
 
 import torch
-
-from airbench94 import CifarLoader, make_net, evaluate
 
 hyp = {
     'net': {
