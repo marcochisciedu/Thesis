@@ -115,8 +115,8 @@ class CifarLoader:
             imgs_per_label = [int(num_imgs/len(data['classes']))]*(len(data['classes']))
             # check if some classes need a different percentage of images
             if list_low_classes is not None:
-                for j in list_low_classes:
-                    imgs_per_label[j] = int(data['images'].size()[0]*low_percentage/(100*len(data['classes'])))
+                for index, value in enumerate(list_low_classes):
+                    imgs_per_label[value] = int(data['images'].size()[0]*low_percentage[index]/(100*len(data['classes'])))
             self.images= torch.empty((0,data['images'].size()[1], data['images'].size()[2], data['images'].size()[3]),dtype=torch.uint8, device=gpu)
             self.labels=torch.empty((0),dtype=torch.uint8, device=gpu)
             for i in range(len(data['images'])):
@@ -469,8 +469,8 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])+ "percent_"
-                +str(hyp['opt']['train_epochs'])+ "epochs", type="model",
+                 "CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
 

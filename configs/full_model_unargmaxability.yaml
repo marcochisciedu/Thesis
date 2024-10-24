@@ -1,3 +1,5 @@
+model_name: /CIFAR10_100_100percent_9.9epochs:v14
+
 # Number of swaps to attempt before giving up
 patience: 100
 

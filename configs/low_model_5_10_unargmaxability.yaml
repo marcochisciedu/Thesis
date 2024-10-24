@@ -1,0 +1,10 @@
+model_name: /CIFAR10_100_5_10percent_9.9epochs:v3
+
+# Number of swaps to attempt before giving up
+patience: 100
+
+# Largest possible logit activatio
+logit_upper_bound: 100
+
+# Smallest possible logit activation
+logit_lower_bound : -100

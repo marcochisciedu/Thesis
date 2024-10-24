@@ -22,7 +22,7 @@ b = None
 LB = -100
 UB = 100
 
-# Check if point is in bounds
+# Check if point is whithin bounds
 def is_in_bounds(p, lb, ub):
     in_bounds = True
     for coord in p:
@@ -158,6 +158,7 @@ def class_is_bounded(class_idx,
             raise ValueError('Unknown approximate algorithm: "%s"' % approx_algorithm)
 
     if exact_algorithm is not None:
+        # Uses exact algorithm only if there is no approx algorithm or it found a potentially unargamaxable class
         if approx_algorithm is None or approx_result['is_bounded']:
             exact_enum = ExactAlgorithms[exact_algorithm]
             if exact_enum == ExactAlgorithms.lp_chebyshev:
@@ -212,7 +213,7 @@ def lp_chebyshev(position, W, b=None, lb=LB, ub=UB):
     # lp = linprog(c, A_ub=braid, b_ub=braid_b, bounds=(None, None))
     # bounded = not lp.success
 
-    # Use Gurobi
+    # Use Gurobi, creates model and sets parameters
     m = gp.Model('m')
     m.setParam('OutputFlag', 0)
     # m.setParam('Presolve', 1)
@@ -222,12 +223,14 @@ def lp_chebyshev(position, W, b=None, lb=LB, ub=UB):
     m.params.threads = 1
     # NOTE: We need to specify ub and lb here otherwise there are definitely
     # unbounded regions.
+    # Adds variable and bounds them
     x = m.addMVar(lb=lb, ub=ub, shape=dim, name='xx')
 
     r = m.addMVar(lb=EPSILON, shape=1, name='r')
     # Add Chebyshev column
     cheby = np.linalg.norm(braid, axis=1, keepdims=True)
 
+    # Main constraint
     m.addConstr(braid @ x + cheby @ r <= -braid_b, name='cc')
     m.setObjective(r, GRB.MAXIMIZE)
     m.update()
@@ -289,7 +292,7 @@ def candidate_is_bounded(candidate_idx, W, b=None, lb=LB, ub=UB, patience=100):
                   iterations=pat)
     return result
 
-
+# Line 1 of the algorithm in the paper
 def get_swap_target(target_idx, point, W, b=None):
     assert(point.shape[1] == 1)
     # Compute activation
@@ -304,7 +307,7 @@ def get_swap_target(target_idx, point, W, b=None):
     argmax_idx = np.argmax(act) 
     return argmax_idx
 
-
+# Lines 2-6 of the algorithm in the paper
 def swap(ci, cj, cur_point, W, b=None):
 
     # Braid normal vector for pair(i, j)
