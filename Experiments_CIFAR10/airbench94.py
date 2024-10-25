@@ -251,8 +251,8 @@ def make_net():
         ConvGroup(widths['block2'], widths['block3'], batchnorm_momentum),
         nn.MaxPool2d(3),
         Flatten(),
-        nn.Linear(widths['block3'], 5, bias=False),
-        nn.Linear(5, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
+        nn.Linear(widths['block3'], 3, bias=False),
+        nn.Linear(3, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
         Mul(hyp['net']['scaling_factor']),
     )
     net[0].weight.requires_grad = False
@@ -350,7 +350,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "BottleneckCIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -471,7 +471,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
