@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import numpy as np
 from numpy import linalg
 import matplotlib.pyplot as plt
+import seaborn as sns
 from mpl_toolkits.mplot3d import Axes3D
 import torch
 import plotly.graph_objs as go
@@ -67,8 +68,8 @@ def vector_plot(tvects,is_vect=True,orig=[0,0,0]):
 
     return fig
 
-# Calculates the adjecency matrix of the features
-def calculate_adjecency_matrix(W):
+# Calculates the adjacency matrix of the features
+def calculate_adjacency_matrix(W):
     # Calculate the convex hull (Delaunay triangulation on the sphere)
     hull = ConvexHull(W)
 
@@ -87,6 +88,30 @@ def calculate_adjecency_matrix(W):
 
     # Show the adjacency matrix
     return adjacency_matrix
+
+# Calculate and show the sum of all the adjacency matrices
+def adjacency_matrices_sum(adj_matrices, classes):
+    summed_matrix = np.zeros((adj_matrices.shape[1], adj_matrices.shape[2]), dtype = int)
+
+    # Sum all the adjacency matrices
+    for i in range(adj_matrices.shape[0]):
+        summed_matrix += adj_matrices[i]
+    
+    df_sum = pd.DataFrame(summed_matrix, index = [i for i in classes], columns = [i for i in classes])
+    figure_sum=plt.figure(figsize = (12,7))
+    sns.heatmap(df_sum, annot=True, fmt='d', linewidth=.5)
+    plt.show()
+    
+    # Create the correspondent percentages matrix
+    percent_matrix = summed_matrix.astype(float)
+    percent_matrix = percent_matrix/(adj_matrices.shape[0])*100
+
+    df_sum_per = pd.DataFrame(percent_matrix, index = [i for i in classes], columns = [i for i in classes])
+    figure_per= plt.figure(figsize = (12,7))
+    sns.heatmap(df_sum_per, annot=True, fmt=".1f" , linewidth=.5)
+    plt.show()
+    
+    return df_sum, df_sum_per, figure_sum, figure_per
 
 # Get the squared frobenius norm of all the combinations of the adjacency matrices
 def frobenius_norm_matrices(matrices):
@@ -143,6 +168,41 @@ def mutual_knn_alignment_features(W_array, k):
     
     return knn_alignment
 
+# Given the knn alignment matrix calculate the mean alignment for each model
+def calculate_mean_alignment_vector(knn_alignment_matrix):
+    mean_alignment_vec = np.zeros((knn_alignment_matrix.shape[0]) ,dtype= float)
+
+    # Remove the diagonal
+    temp_mat= knn_alignment_matrix[~np.eye(knn_alignment_matrix.shape[0],dtype=bool)].reshape(knn_alignment_matrix.shape[0],-1)
+
+    # Calculate the mean alignment of each model
+    for i in range(knn_alignment_matrix.shape[0]):
+        mean_alignment_vec[i] = np.mean(temp_mat[i])
+    
+    return mean_alignment_vec
+
+# Find indices of the most, least and "medium" similar to the others
+def find_models_indices(mean_alignment_vec):
+    # Find most and least aligned models
+    max_index = np.argmax(mean_alignment_vec)
+    min_index = np.argmin(mean_alignment_vec)
+
+    # Calculate the mean alignment value and find its closest model
+    mean = np.mean(mean_alignment_vec)
+    dist_from_mean = np.square(mean_alignment_vec -mean)
+    mean_index = np.argmin(dist_from_mean)
+
+    return max_index, min_index, mean_index
+
+# Given the knn alignment matrix and the model index plot its alignment to the other models
+def plot_alignment(knn_alignment_matrix, index):
+
+    fig, ax = plt.subplots()
+    ax.hist(knn_alignment_matrix[index], bins = int(knn_alignment_matrix.shape[1]/5), range = (0,1))
+    plt.show()
+
+    return fig
+
 
 
 
@@ -170,7 +230,7 @@ def main():
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "3D plot multiple runs"+ model_name[1:-4],
+        name = "Features alignment "+ model_name[1:-4],
         config=hyp)
     
     # Get test images
@@ -179,8 +239,9 @@ def main():
     adj_matrices = []
     W_array = []
 
-    for i in range(5):
+    for i in range(100):
         current_model_name = model_name+ str(i)
+        print(current_model_name)
         # Get model
         model = make_net()
         artifact = wandb_run.use_artifact(WANDB_PROJECT+current_model_name, type='model')
@@ -197,36 +258,61 @@ def main():
         # Get model last layer's weights and plot its vectors
         W = model[8].weight.detach().cpu().numpy().astype(np.float32)
         W_array.append(W)
+        """ 3d plot
         figure= vector_plot(W)
         wandb.log({"3d plot" +  current_model_name[1:]: wandb.Plotly(figure)})
+        """
 
-        # Calculate the adjecency matrix of the features
-        adjacency_matrix=calculate_adjecency_matrix(W)
+        # Calculate the adjacency matrix of the features
+        adjacency_matrix=calculate_adjacency_matrix(W)
         adj_matrices.append(adjacency_matrix)
+        """ print each adjacency matrix
         classes = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
         df_adjacency = pd.DataFrame(adjacency_matrix)
         df_adjacency.columns = classes
         df_adjacency.index = classes
-
-        print(df_adjacency)
-        wandb.log({"Adjecency matrix "+  current_model_name[1:]: wandb.Table(dataframe=df_adjacency)})
     
-    # Get the frobenius norm matrix of all the adjecency matrices    
+        print(df_adjacency)
+        wandb.log({"Adjacency matrix "+  current_model_name[1:]: wandb.Table(dataframe=df_adjacency)})
+        """
+    
+    # Get the frobenius norm matrix of all the adjacency matrices    
     adj_matrices = np.array(adj_matrices)
     fro_norm_matrix=frobenius_norm_matrices(adj_matrices)
     df_fro_norm = pd.DataFrame(fro_norm_matrix)
 
-    print( df_fro_norm)
+    print(f"Frobenius norm matrix: \n {df_fro_norm}")
     wandb.log({"Frobenius norm matrix "+  model_name[1:-4]: wandb.Table(dataframe=df_fro_norm)})
 
-    # Calculate mutual knn aligment between features
+    # Calculate mutual knn alignment between features
     W_array = np.array(W_array)
     for k in [2,3,4,5]:
         knn_alignment= mutual_knn_alignment_features(W_array, k)
         df_knn_alignment = pd.DataFrame(knn_alignment)
         print("k:" + str(k))
-        print( df_knn_alignment)
+        print(f"KNN alignment, k: {k} \n {df_knn_alignment}")
         wandb.log({"KNN alignment, k: "+ str(k) + " " +  model_name[1:-4]: wandb.Table(dataframe=df_knn_alignment)})
+        # Print the alignment between every model and the most/least/"medium" aligned models
+        mean_alignment_vec= calculate_mean_alignment_vector(knn_alignment)
+        max_index, min_index, mean_index = find_models_indices(mean_alignment_vec)
+        max_fig = plot_alignment(knn_alignment, max_index)
+        wandb.log({'Most aligned model, k:' + str(k): wandb.Image(max_fig)})
+        min_fig = plot_alignment(knn_alignment, min_index)
+        wandb.log({'Least aligned model, k:' + str(k): wandb.Image(min_fig)})
+        mean_fig = plot_alignment(knn_alignment, max_index)
+        wandb.log({'Medium aligned model, k:' + str(k): wandb.Image(mean_fig)})
+    
+    #Calculate and show the sum of all the adjacency matrices
+    classes = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    df_summed_matrix, df_percent_matrix, fig_sum, fig_per= adjacency_matrices_sum(adj_matrices, classes)
+
+    print(f"Sum of all adjacency matrices:\n {df_summed_matrix}")
+    wandb.log({"Sum of all adjacency matrices "+  model_name[1:-4]: wandb.Table(dataframe=df_summed_matrix)})
+    wandb.log({'Heatmap of the sum of all adjacency matrices': wandb.Image(fig_sum)})
+
+    print(f"Percentage of all adjacency matrices:\n {df_percent_matrix}")
+    wandb.log({"Percentage of all adjacency matrices "+  model_name[1:-4]: wandb.Table(dataframe=df_percent_matrix)})
+    wandb.log({'Heatmap of the percentage of all adjacency matrices': wandb.Image(fig_per)})
 
     wandb_run.finish()
     

@@ -350,7 +350,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "New Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -471,7 +471,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "New_Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -514,7 +514,7 @@ if __name__ == "__main__":
     hyp['data']['low_percentage'] = loaded_params['low_percentage']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(5)])
+    accs = torch.tensor([main(run) for run in range(100)])
 
     # Log mean and std
     wandb_run=wandb.init(
