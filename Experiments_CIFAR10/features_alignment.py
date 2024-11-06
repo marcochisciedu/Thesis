@@ -99,7 +99,8 @@ def adjacency_matrices_sum(adj_matrices, classes):
     
     df_sum = pd.DataFrame(summed_matrix, index = [i for i in classes], columns = [i for i in classes])
     figure_sum=plt.figure(figsize = (12,7))
-    sns.heatmap(df_sum, annot=True, fmt='d', linewidth=.5)
+    sns.heatmap(df_sum, cmap="Purples", vmin=0, vmax=adj_matrices.shape[0], annot=True, fmt='d', linewidth=.5, square= True)
+    plt.title('Sum of all the adjacency matrices')
     plt.show()
     
     # Create the correspondent percentages matrix
@@ -108,7 +109,8 @@ def adjacency_matrices_sum(adj_matrices, classes):
 
     df_sum_per = pd.DataFrame(percent_matrix, index = [i for i in classes], columns = [i for i in classes])
     figure_per= plt.figure(figsize = (12,7))
-    sns.heatmap(df_sum_per, annot=True, fmt=".1f" , linewidth=.5)
+    sns.heatmap(df_sum_per, cmap="Purples", vmin=0, vmax=100, annot=True, fmt=".1f" , linewidth=.5, square= True)
+    plt.title('Percentage of connections between classes')
     plt.show()
     
     return df_sum, df_sum_per, figure_sum, figure_per
@@ -192,13 +194,22 @@ def find_models_indices(mean_alignment_vec):
     dist_from_mean = np.square(mean_alignment_vec -mean)
     mean_index = np.argmin(dist_from_mean)
 
-    return max_index, min_index, mean_index
+    return  [min_index] + [mean_index] + [max_index] 
 
 # Given the knn alignment matrix and the model index plot its alignment to the other models
-def plot_alignment(knn_alignment_matrix, index):
+def plot_alignment(knn_alignment_matrix, indices, k):
 
     fig, ax = plt.subplots()
-    ax.hist(knn_alignment_matrix[index], bins = int(knn_alignment_matrix.shape[1]/5), range = (0,1))
+    x = [knn_alignment_matrix[indices[0]], knn_alignment_matrix[indices[1]], knn_alignment_matrix[indices[2]]]
+    colors = ['firebrick', 'royalblue' , 'limegreen']
+    labels = [ 'least aligned', 'mean', 'most aligned']
+    ax.hist(x, bins = 20, range = (0,1), color= colors, label = labels, edgecolor='black', linewidth=1)
+    plt.legend(loc='upper left')
+    plt.ylim(0, knn_alignment_matrix.shape[0])  # Set y-axis range 
+    plt.title("Mutual knn alignment, k: "+ str(k))
+    plt.xlabel("Mutual knn alignement")
+    plt.ylabel("Number of models")
+    plt.tight_layout()
     plt.show()
 
     return fig
@@ -294,13 +305,10 @@ def main():
         wandb.log({"KNN alignment, k: "+ str(k) + " " +  model_name[1:-4]: wandb.Table(dataframe=df_knn_alignment)})
         # Print the alignment between every model and the most/least/"medium" aligned models
         mean_alignment_vec= calculate_mean_alignment_vector(knn_alignment)
-        max_index, min_index, mean_index = find_models_indices(mean_alignment_vec)
-        max_fig = plot_alignment(knn_alignment, max_index)
-        wandb.log({'Most aligned model, k:' + str(k): wandb.Image(max_fig)})
-        min_fig = plot_alignment(knn_alignment, min_index)
-        wandb.log({'Least aligned model, k:' + str(k): wandb.Image(min_fig)})
-        mean_fig = plot_alignment(knn_alignment, max_index)
-        wandb.log({'Medium aligned model, k:' + str(k): wandb.Image(mean_fig)})
+        indices = find_models_indices(mean_alignment_vec)
+        fig = plot_alignment(knn_alignment, indices, k)
+        wandb.log({'Mutual knn alignment, k:' + str(k): wandb.Image(fig)})
+        
     
     #Calculate and show the sum of all the adjacency matrices
     classes = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
