@@ -77,14 +77,12 @@ def calculate_adjacency_matrix(W):
     adjacency_matrix = np.zeros((W.shape[0], W.shape[0]), dtype=int)
     
     # Update the adjacency matrix based on the convex hull simplices
-    # Each simplex contains the indices of the 3 vertices it connects
+    # Each simplex contains the indices of the vertices it connects
     for simplex in hull.simplices:
-        adjacency_matrix[simplex[0], simplex[1]] = 1
-        adjacency_matrix[simplex[1], simplex[0]] = 1
-        adjacency_matrix[simplex[1], simplex[2]] = 1
-        adjacency_matrix[simplex[2], simplex[1]] = 1
-        adjacency_matrix[simplex[2], simplex[0]] = 1
-        adjacency_matrix[simplex[0], simplex[2]] = 1
+        for i in range(simplex.shape[0]-1):
+            for j in range(i+1, simplex.shape[0]):
+                adjacency_matrix[simplex[i],simplex[j]]=1
+                adjacency_matrix[simplex[j],simplex[i]]=1
 
     # Show the adjacency matrix
     return adjacency_matrix
