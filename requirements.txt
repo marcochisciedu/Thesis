@@ -8,3 +8,4 @@ tqdm
 gurobipy
 pandas
 plotly
+seaborn
