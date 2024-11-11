@@ -119,6 +119,8 @@ class CifarLoader:
             if list_low_classes is not None:
                 for index, value in enumerate(list_low_classes):
                     imgs_per_label[value] = int(data['images'].size()[0]*low_percentage[index]/(100*len(data['classes'])))
+                    print(f"Using {low_percentage[index]}% of the {index}° class's images")
+            print(f"Using 100% of the other classes' images")
             self.images= torch.empty((0,data['images'].size()[1], data['images'].size()[2], data['images'].size()[3]),dtype=torch.uint8, device=gpu)
             self.labels=torch.empty((0),dtype=torch.uint8, device=gpu)
             for i in range(len(data['images'])):
@@ -350,7 +352,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "New Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "HalfBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -471,7 +473,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "New_Bottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "HalfBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -514,7 +516,7 @@ if __name__ == "__main__":
     hyp['data']['low_percentage'] = loaded_params['low_percentage']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(100)])
+    accs = torch.tensor([main(run) for run in range(1)])
 
     # Log mean and std
     wandb_run=wandb.init(
