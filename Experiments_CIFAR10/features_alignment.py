@@ -213,8 +213,6 @@ def plot_alignment(knn_alignment_matrix, indices, k):
     return fig
 
 
-
-
 def main():
 
     # Select config 
@@ -287,7 +285,7 @@ def main():
             sns.heatmap(df_adjacency, cmap="Purples", vmin=0, vmax=1, annot=True, fmt='d', linewidth=.5, square= True)
             plt.title('Adjacency matrix')
             plt.show()
-            wandb.log({'Adjacency matrix ' +current_model_name[1:]: wandb.Image(fig)})
+            wandb.log({'Adjacency matrix heatmap' +current_model_name[1:]: wandb.Image(fig)})
         
     if num_models > 1:
         # Get the frobenius norm matrix of all the adjacency matrices    
