@@ -15,13 +15,13 @@ from features_alignment import calculate_adjacency_matrix, adjacency_matrices_su
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
-from negative_flip_rate import *
+from negative_flip import *
 
 hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
     },
-    'num_models' : 100            # number of "new" models 
+    'num_models' : 100           # number of "new" models 
 }
 
 # Simple function that creates a dataframe given a matrix, and plots its heatmap.
@@ -36,21 +36,6 @@ def df_plot_heatmap(matrix, classes, title, cmap, fmt, center=None, display= Tru
         plt.ylabel("Old prediction")
     else: 
         fig = None
-    return df, fig
-
-# Simple function that creates a dataframe given a matrix, and plots its table
-def df_plot_table(matrix, classes, title, colors):
-    df = pd.DataFrame(matrix, index = [i for i in classes], columns = [i for i in classes])
-    
-    fig, ax = plt.subplots(figsize=(12,12))
-    ax.set_axis_off()
-    # Create table
-    table = ax.table(cellText=df.values, cellLoc='center', loc='center', colLabels=classes, rowLabels=classes, cellColours=colors)
-    table.auto_set_font_size(False)
-    table.set_fontsize(8.5)
-    table.scale(1.2, 4)
-    plt.title(title)
-
     return df, fig
 
 # Calculate a negative flips heatmap showing how many time the old model's predictions (y axes) 
@@ -84,26 +69,42 @@ def link_NFR_adjacency(nfr_heatmap, adj_heatmap, display= True):
 
     return fig, df_nfr_adj
 
+# Creates, prints and plots a summary of all the NFR - adjacency matrices 
+def summary_nfr_adj(nfr_adj_matrices, classes, impr = ""):
+    # Count all the negative flips 
+    sum_nfr_adj_mat =  np.sum(np.absolute(nfr_adj_matrices), axis = 0)
+    df_sums, fig_sum = df_plot_heatmap(sum_nfr_adj_mat, classes,"All "+ impr+ " negative flips'", 'Purples', 'd')
+    print_and_log(df_sums, fig_sum, "All "+ impr+ " negative flips'")
+    total_flips = np.sum(sum_nfr_adj_mat)
+
+    # Replace all the positive numbers with 0, count all the negative flips between non-adjacent classes
+    tmp_negative = np.copy(nfr_adj_matrices)
+    tmp_negative[ tmp_negative >0] = 0
+    negative_nfr_adj_mat = np.sum(np.absolute(tmp_negative), axis =0)
+    neg_perc_nfr_adj_mat = negative_nfr_adj_mat* 100/total_flips
+    df_neg, fig_neg = df_plot_heatmap(negative_nfr_adj_mat, classes,impr+' Negative flips of non-adjacent classes', 'Reds', 'd')
+    print_and_log(df_neg, fig_neg, impr+' Negative flips of non-adjacent classes')
+    df_neg_per, fig_neg_per = df_plot_heatmap(neg_perc_nfr_adj_mat, classes,impr+ " Negative flips of non-adjacent classes' percentage ", 'Reds', '.1f')
+    print_and_log(df_neg_per, fig_neg_per, impr+" Negative flips of non-adjacent classes' percentage ")
+    neg_per = np.sum(neg_perc_nfr_adj_mat)
+
+    # Replace all the negative numbers with 0, count all the negative flips between adjacent classes
+    tmp_positive = np.copy(nfr_adj_matrices)
+    tmp_positive[ tmp_positive <0] = 0
+    positive_nfr_adj_mat = np.sum(tmp_positive, axis =0)
+    potitive_perc_nfr_adj_mat = positive_nfr_adj_mat* 100/total_flips
+    df_pos, fig_pos = df_plot_heatmap(positive_nfr_adj_mat, classes,impr+' Negative flips of adjacent classes', 'Blues', 'd')
+    print_and_log(df_pos, fig_pos,impr+' Negative flips of adjacent classes')
+    df_pos_per, fig_pos_per = df_plot_heatmap(potitive_perc_nfr_adj_mat, classes, impr+" Negative flips of adjacent classes' percentage ", 'Blues', '.1f')
+    print_and_log(df_pos_per, fig_pos_per,impr+" Negative flips of adjacent classes' percentage ")
+    pos_per = np.sum(potitive_perc_nfr_adj_mat)
+    return neg_per, pos_per
+
 # Simple function that prints and log a dataframe and a figure given their title
 def print_and_log(df, fig, title):
     print(title+ f":\n {df}")
     wandb.log({title: wandb.Image(fig)})
 
-# Create color matrix given the min and max values
-def min_max_to_colors(min_mat, max_mat):
-    colors= []
-
-    for i in range(min_mat.shape[0]):
-        tmp =["mediumorchid"]*min_mat.shape[0]
-        for j in range(min_mat.shape[1]):
-            if min_mat[i,j]>0 and max_mat[i,j] >0:
-                tmp[j] = "cornflowerblue"
-            elif  min_mat[i,j]<0 and max_mat[i,j] <0:
-                tmp[j] = "#ff000d"
-            elif min_mat[i,j]==0 and max_mat[i,j] ==0:
-                tmp[j] = "white"
-        colors.append(tmp)
-    return colors
 
 def main():
 
@@ -226,19 +227,7 @@ def main():
         mean_flip_per_mat =  np.mean(np.array(flip_per_mat), axis = 0)
         df_mean_flip_per, fig_mean_flip_per= df_plot_heatmap(mean_flip_per_mat, classes, 'Mean percentage of negative flips', 'Purples', '.1f')
         print_and_log(df_mean_flip_per, fig_mean_flip_per,"Mean heatmap of the negative flips' percentage between classes")
-        mean_nfr_adj_mat =  np.mean(np.array(nfr_adj_matrices), axis = 0)
-        std_nfr_adj_mat = np.std(np.array(nfr_adj_matrices), axis = 0)
-        min_nfr_adj_mat = np.min(np.array(nfr_adj_matrices),axis = 0)
-        max_nfr_adj_mat = np.max(np.array(nfr_adj_matrices),axis = 0)
-        min_max_nfr_adj_mat = [[('('+str(min_nfr_adj_mat[i,j].item())+','+str(max_nfr_adj_mat[i,j].item())+')'+'~'+ "%.2f" % std_nfr_adj_mat[i,j].item())
-                                 for j in range(min_nfr_adj_mat.shape[0])]
-                                for i in range(min_nfr_adj_mat.shape[1])]
-        min_max_colors= min_max_to_colors(min_nfr_adj_mat, max_nfr_adj_mat) 
-        cmap_nfr_adj = LinearSegmentedColormap.from_list('', ['red', 'white', 'blue'])
-        df_mean_nfr_adj, fig_mean_nfr_adj= df_plot_heatmap(mean_nfr_adj_mat, classes, 'Mean Negative flips - Adjacency matrix', cmap_nfr_adj, '.1f', center = 0)
-        print_and_log(df_mean_nfr_adj, fig_mean_nfr_adj,"Mean heatmap of the negative flips - adjacency matrix")
-        df_min_max ,fig_min_max = df_plot_table(min_max_nfr_adj_mat, classes, "(Min-Max)~Std of the negative flips - adjacency matrix heatmaps", min_max_colors )
-        print_and_log(df_min_max, fig_min_max, "(Min-Max)~Std of the negative flips - adjacency matrix heatmaps")
+        neg_per, pos_per = summary_nfr_adj(nfr_adj_matrices, classes)
         
         # Same code but with the improved NFR
         mean_impr_flip_mat = np.mean(np.array(impr_flip_matrices), axis = 0)
@@ -247,20 +236,13 @@ def main():
         mean_impr_per_flip_mat = np.mean(np.array(impr_flip_per_mat), axis = 0)
         df_mean_impr_flip_per, fig_mean_impr_flip_per= df_plot_heatmap(mean_impr_per_flip_mat, classes, 'Mean percentage of improved negative flips', 'Purples', '.1f')
         print_and_log(df_mean_impr_flip_per, fig_mean_impr_flip_per,"Mean heatmap of the improved negative flips' percentage between classes")
-        mean_impr_nfr_adj_mat = np.mean(np.array(impr_nfr_adj_matrices), axis = 0)
-        impr_std_nfr_adj_mat = np.std(np.array(impr_nfr_adj_matrices), axis = 0)
-        impr_min_nfr_adj_mat = np.min(np.array(impr_nfr_adj_matrices),axis = 0)
-        impr_max_nfr_adj_mat = np.max(np.array(impr_nfr_adj_matrices),axis = 0)
-        impr_min_max_nfr_adj_mat = [[('('+str(impr_min_nfr_adj_mat[i,j].item())+','+str(impr_max_nfr_adj_mat[i,j].item())+')'+'~'+ 
-                                "%.2f" % impr_std_nfr_adj_mat[i,j].item())
-                                for j in range(impr_min_nfr_adj_mat.shape[0])]
-                                for i in range(impr_min_nfr_adj_mat.shape[1])]
-        impr_min_max_colors= min_max_to_colors(impr_min_nfr_adj_mat, impr_max_nfr_adj_mat) 
-        df_impr_mean_nfr_adj, fig_impr_mean_nfr_adj= df_plot_heatmap(mean_impr_nfr_adj_mat, classes, 'Mean improved Negative flips - Adjacency matrix', cmap_nfr_adj, '.1f', center = 0)
-        print_and_log(df_impr_mean_nfr_adj, fig_impr_mean_nfr_adj,"Mean heatmap of the improved negative flips - adjacency matrix")
-        df_impr_min_max ,fig_impr_min_max = df_plot_table(impr_min_max_nfr_adj_mat, classes, "(Min-Max)~Std of the improved negative flips - adjacency matrix heatmaps", impr_min_max_colors )
-        print_and_log(df_impr_min_max, fig_impr_min_max, "(Min-Max)~Std of the improved negative flips - adjacency matrix heatmaps")
+        impr_neg_per, impr_pos_per= summary_nfr_adj(impr_nfr_adj_matrices, classes, impr = "Improved")
         
+        per_metrics = {'Non-adjacent negative flips percentage': neg_per,
+                        'Adjacent negative flips percentage' : pos_per,
+                        'Non-adjacent improved negative flips percentage': impr_neg_per,
+                        'Adjacent improved negative flips percentage' : impr_pos_per}
+        wandb.log({**per_metrics})
         
     wandb_run.finish()
 

@@ -17,7 +17,7 @@ import torchvision.transforms as T
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
-
+from negative_flip import *
 torch.backends.cudnn.benchmark = True
 
 # We express the main training hyperparameters (batch size, learning rate, momentum, and weight decay)
@@ -61,7 +61,10 @@ hyp = {
         'percentage':100,           # percentage of CIFAR10 to use
         'low_classes': None,        # which classes get a lower percentage of data
         'low_percentage': 10,       # percentage of the class to take
-    }
+    },
+    'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
+    'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
+
 }
 
 #############################################
@@ -119,7 +122,7 @@ class CifarLoader:
             if list_low_classes is not None:
                 for index, value in enumerate(list_low_classes):
                     imgs_per_label[value] = int(data['images'].size()[0]*low_percentage[index]/(100*len(data['classes'])))
-                    print(f"Using {low_percentage[index]}% of the {index}° class's images")
+                    print(f"Using {low_percentage[index]}% of the {value}° class's images")
             print(f"Using 100% of the other classes' images")
             self.images= torch.empty((0,data['images'].size()[1], data['images'].size()[2], data['images'].size()[3]),dtype=torch.uint8, device=gpu)
             self.labels=torch.empty((0),dtype=torch.uint8, device=gpu)
@@ -352,7 +355,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "HalfBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "NFRTrainBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -379,6 +382,11 @@ def main(run):
 
     model = make_net()
     current_steps = 0
+    if hyp['nfr']:
+        old_model = make_net()
+        artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
+        artifact_dir = artifact.download()
+        old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
 
     norm_biases = [p for k, p in model.named_parameters() if 'norm' in k and p.requires_grad]
     other_params = [p for k, p in model.named_parameters() if 'norm' not in k and p.requires_grad]
@@ -456,7 +464,18 @@ def main(run):
         train_loss = loss.item() / batch_size
         val_acc = evaluate(model, test_loader, tta_level=0)
         train_metrics = {'train_loss': train_loss, 'train_acc': train_acc, 'val_acc': val_acc}
-        wandb.log({**train_metrics})
+        wandb.log({**train_metrics}, step= epoch)
+
+
+        ###################
+        #  NFR Evaluation #
+        ###################
+        if hyp['nfr']:
+            nfr, _, _ = negative_flip_rate(old_model, model, test_loader)
+            impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, test_loader)
+            print(f"Negative flip rate at epoch {epoch}: {nfr}")
+            print(f"Improved negative flip rate at epoch {epoch}: {impr_nfr}")
+            wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr}, step= epoch)
 
     ####################
     #  TTA Evaluation  #
@@ -473,7 +492,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "HalfBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "NFRTrainBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -514,9 +533,12 @@ if __name__ == "__main__":
     hyp['opt']['train_epochs'] = loaded_params['epochs']
     hyp['data']['low_classes'] = loaded_params['low_class_list']
     hyp['data']['low_percentage'] = loaded_params['low_percentage']
+    hyp['nfr'] = loaded_params['nfr']
+    if hyp['nfr'] == True:
+        hyp['old_model_name'] = loaded_params['old_model']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(1)])
+    accs = torch.tensor([main(run) for run in range(100)])
 
     # Log mean and std
     wandb_run=wandb.init(

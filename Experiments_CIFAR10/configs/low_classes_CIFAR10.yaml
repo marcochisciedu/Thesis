@@ -6,3 +6,6 @@ low_class_list: [2,6]
 low_percentage: [5,10]
 
 epochs: 9.9
+
+# If NFR is going to be calculated after each epoch
+nfr: False
