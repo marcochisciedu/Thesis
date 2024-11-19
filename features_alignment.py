@@ -197,9 +197,9 @@ def class_negative_flip_rate_features(class_index, model_v1, model_v2, test_load
 
             
     # Normalize all the features
-    all_correct_feat = normalize(np.array(all_correct_feat), axis=1, norm='l1')
-    all_adj_flip_feat = normalize(np.array(all_adj_flip_feat), axis=1, norm='l1')
-    all_non_adj_flip_feat = normalize(np.array(all_non_adj_flip_feat), axis=1, norm='l1')
+    all_correct_feat = normalize(np.array(all_correct_feat), axis=1, norm='l2')
+    all_adj_flip_feat = normalize(np.array(all_adj_flip_feat), axis=1, norm='l2')
+    all_non_adj_flip_feat = normalize(np.array(all_non_adj_flip_feat), axis=1, norm='l2')
 
     return all_correct_feat, all_adj_flip_feat, all_non_adj_flip_feat
 
@@ -257,8 +257,8 @@ def class_improved_negative_flip_rate_features(class_index, model_v1, model_v2, 
 
             
     # Normalize all the features
-    all_correct_feat = normalize(np.array(all_correct_feat), axis=1, norm='l1')
-    all_adj_flip_feat = normalize(np.array(all_adj_flip_feat), axis=1, norm='l1')
-    all_non_adj_flip_feat = normalize(np.array(all_non_adj_flip_feat), axis=1, norm='l1')
+    all_correct_feat = normalize(np.array(all_correct_feat), axis=1, norm='l2')
+    all_adj_flip_feat = normalize(np.array(all_adj_flip_feat), axis=1, norm='l2')
+    all_non_adj_flip_feat = normalize(np.array(all_non_adj_flip_feat), axis=1, norm='l2')
 
     return all_correct_feat, all_adj_flip_feat, all_non_adj_flip_feat
