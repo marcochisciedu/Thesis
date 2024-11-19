@@ -11,17 +11,17 @@ from matplotlib.colors import LinearSegmentedColormap
 import torch
 
 from airbench94 import CifarLoader, make_net, evaluate
-from features_alignment import calculate_adjacency_matrix, adjacency_matrices_sum
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
+from features_alignment import calculate_adjacency_matrix, adjacency_matrices_sum
 
 hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
     },
-    'num_models' : 100           # number of "new" models 
+    'num_models' : 1           # number of "new" models 
 }
 
 # Simple function that creates a dataframe given a matrix, and plots its heatmap.
@@ -131,7 +131,7 @@ def main():
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "NFR Second Half Classes CIFAR10_" + str(hyp['num_models'])+"models",
+        name = "NFR First Half Classes CIFAR10_" + str(hyp['num_models'])+"models",
         config=hyp)
     
     # Get test images

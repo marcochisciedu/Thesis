@@ -1,1 +1,5 @@
 model_name: /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+
+# If NFR is going to be calculated and shown in the 3D plot
+nfr: False
+old_model : None
