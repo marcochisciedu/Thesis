@@ -7,6 +7,8 @@ import sys
 import wandb
 import argparse, yaml
 from math import ceil
+import numpy as np
+import copy
 from dotenv import load_dotenv
 
 import torch
@@ -64,7 +66,7 @@ hyp = {
     },
     'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
-
+    'loss' : 'default'              # training loss used
 }
 
 #############################################
@@ -347,6 +349,16 @@ def evaluate(model, loader, tta_level=0):
     return (logits.argmax(1) == loader.labels).float().mean().item()
 
 ############################################
+#          Cosine similarity loss          #
+############################################
+def create_prob_simplex_vertex(num_classes):
+    vertex_prob = np.eye(num_classes)
+    center_vertex = np.mean(vertex_prob, axis=0)
+    prototypes_prob = vertex_prob - center_vertex
+    return prototypes_prob
+
+
+############################################
 #                Training                  #
 ############################################
 
@@ -355,7 +367,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "NFRTrainBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "OutputCosSimBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -435,7 +447,20 @@ def main(run):
         for inputs, labels in train_loader:
 
             outputs = model(inputs)
-            loss = loss_fn(outputs, labels).sum()
+            if hyp['loss'] == 'cosine_similarity':
+                # Create the simplex and get target_cos
+                simplex = create_prob_simplex_vertex(10)
+                target_cos = torch.tensor(simplex[labels.cpu().numpy()], dtype=torch.float32)
+                # Target tensor for CosineEmbeddingLoss
+                cosine_targets = torch.ones(batch_size)  # All 1s since we want to maximize similarity
+
+                # Loss function
+                criterion = nn.CosineEmbeddingLoss(margin=0.0)
+                loss_cosine = criterion(outputs, target_cos.cuda(), cosine_targets.cuda())
+                loss_CE = loss_fn(outputs, labels).sum()
+                loss = loss_CE + loss_cosine
+            else:
+                loss = loss_fn(outputs, labels).sum()
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
@@ -492,7 +517,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "NFRTrainBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "OutputCosSimBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -536,9 +561,10 @@ if __name__ == "__main__":
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
+    hyp['loss'] = loaded_params['loss']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(100)])
+    accs = torch.tensor([main(run) for run in range(1)])
 
     # Log mean and std
     wandb_run=wandb.init(

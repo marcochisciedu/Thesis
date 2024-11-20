@@ -149,7 +149,7 @@ def main():
     
     with open(params.config_path, 'r') as stream:
         loaded_params = yaml.safe_load(stream)
-    model_name = loaded_params['model_name'][:-1]
+    model_name = loaded_params['model_name']
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
@@ -165,7 +165,7 @@ def main():
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "3D plotting negative flips "+ model_name[1:-4],
+        name = "Test negative flips "+ model_name[1:-4],
         config=hyp)
     
     # Get test images
@@ -176,7 +176,10 @@ def main():
     W_array = []
 
     for i in range(hyp['num_models']):
-        current_model_name = model_name+ str(i)
+        if hyp['num_models'] > 1:
+            current_model_name = model_name[:-1]+str(i+int(model_name[-1]))
+        else:
+            current_model_name = model_name
         print(current_model_name)
         # Get model
         model = make_net()
@@ -195,13 +198,13 @@ def main():
         W = model[8].weight.detach().cpu().numpy().astype(np.float32)
         W_array.append(W)
         # 3d plot
-        if hyp['num_models'] <=5:
+        if hyp['num_models'] <5:
             if hyp['nfr'] == True:
                 old_model = make_net()
                 artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
                 artifact_dir = artifact.download()
                 old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
-                class_index = 3
+                class_index = 5
                 correct_features, adj_nf_features, non_adj_nf_features= class_negative_flip_rate_features(class_index,old_model, model, test_loader)
                 impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat = class_improved_negative_flip_rate_features(class_index,old_model, model, test_loader)
                 
@@ -242,7 +245,7 @@ def main():
             wandb.log({'Mutual knn alignment, k:' + str(k): wandb.Image(fig)})
         
         #Calculate and show the sum of all the adjacency matrices
-        df_summed_matrix, df_percent_matrix, fig_sum, fig_per= adjacency_matrices_sum(adj_matrices, classes)
+        df_summed_matrix, df_percent_matrix, fig_sum, fig_per= adjacency_matrices_sum(np.array(adj_matrices), classes)
 
         print(f"Sum of all adjacency matrices:\n {df_summed_matrix}")
         wandb.log({"Sum of all adjacency matrices "+  model_name[1:-4]: wandb.Table(dataframe=df_summed_matrix)})

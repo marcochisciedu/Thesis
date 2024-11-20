@@ -131,7 +131,7 @@ def main():
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "NFR First Half Classes CIFAR10_" + str(hyp['num_models'])+"models",
+        name = "NFR Second Half Classes CIFAR10_" + str(hyp['num_models'])+"models",
         config=hyp)
     
     # Get test images
@@ -152,7 +152,7 @@ def main():
         # Get model with better performances
         model_v2 = make_net()
         if hyp['num_models'] > 1:
-            current_model_name = new_model_name[:-1]+str(i)
+            current_model_name = new_model_name[:-1]+str(i+int(new_model_name[-1]))
             display_all = False
         else:
             current_model_name = new_model_name
