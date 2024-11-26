@@ -20,6 +20,7 @@ import torchvision.transforms as T
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
+from NFR_losses import *
 torch.backends.cudnn.benchmark = True
 
 # We express the main training hyperparameters (batch size, learning rate, momentum, and weight decay)
@@ -66,7 +67,15 @@ hyp = {
     },
     'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
-    'loss' : 'default'              # training loss used
+    'loss' : 'default' ,             # training loss used
+    'fd' :{                         # focal distillation parameters
+        'fd_alpha' : 1,
+        'fd_beta' : 5,
+        'focus_type' : 'old_correct',
+        'distillation_type' : 'kl',
+        'kl_temperature' : 100,
+        'lambda' : 1,
+    }
 }
 
 #############################################
@@ -367,7 +376,7 @@ def main(run):
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "OutputCosSimBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = "20lambdaL2Focal_DistillationCIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -399,6 +408,7 @@ def main(run):
         artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
         artifact_dir = artifact.download()
         old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
+        old_model.eval()
 
     norm_biases = [p for k, p in model.named_parameters() if 'norm' in k and p.requires_grad]
     other_params = [p for k, p in model.named_parameters() if 'norm' not in k and p.requires_grad]
@@ -459,6 +469,14 @@ def main(run):
                 loss_cosine = criterion(outputs, target_cos.cuda(), cosine_targets.cuda())
                 loss_CE = loss_fn(outputs, labels).sum()
                 loss = loss_CE + loss_cosine
+            elif hyp['loss'] == 'Focal Distillation':
+                # Get old model's prediction
+                old_outputs = old_model(inputs)
+                fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+                loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
+                loss_CE = loss_fn(outputs, labels).sum()
+                loss = loss_CE + hyp['fd']['lambda']*loss_focal_distillation
             else:
                 loss = loss_fn(outputs, labels).sum()
             optimizer.zero_grad(set_to_none=True)
@@ -517,7 +535,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "OutputCosSimBottleneck3CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 "20lambdaL2Focal_Distillation_CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -562,9 +580,16 @@ if __name__ == "__main__":
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
     hyp['loss'] = loaded_params['loss']
+    if hyp['loss'] == 'Focal Distillation':
+        hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
+        hyp['fd']['fd_beta'] = loaded_params['fd_beta']
+        hyp['fd']['focus_type'] = loaded_params['focus_type']
+        hyp['fd']['distillation_type'] = loaded_params['distillation_type']
+        hyp['fd']['kl_temperature'] = loaded_params['kl_temperature']
+        hyp['fd']['lambda'] = loaded_params['lambda']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(1)])
+    accs = torch.tensor([main(run) for run in range(100)])
 
     # Log mean and std
     wandb_run=wandb.init(

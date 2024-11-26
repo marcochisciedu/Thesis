@@ -1,0 +1,20 @@
+# percentage of CIFAR10 to use
+percentage : 100
+
+# which classes have a lower percentage of images
+low_class_list: null
+low_percentage: [100]
+
+epochs : 15
+
+# If NFR is going to be calculated after each epoch
+nfr: True
+old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+
+loss: 'Focal Distillation'
+fd_alpha : 1
+fd_beta : 5
+focus_type : 'old_correct'
+distillation_type : 'l2'
+kl_temperature : 100
+lambda : 20
