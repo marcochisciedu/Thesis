@@ -153,6 +153,7 @@ def main():
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
+        hyp['class_index'] = loaded_params['class_index']
 
     # Get env variables
     load_dotenv()
@@ -165,7 +166,7 @@ def main():
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Test negative flips "+ model_name[1:-4],
+        name = "test negative flips "+ model_name[1:-4],
         config=hyp)
     
     # Get test images
@@ -204,7 +205,7 @@ def main():
                 artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
                 artifact_dir = artifact.download()
                 old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
-                class_index = 5
+                class_index = hyp['class_index']
                 correct_features, adj_nf_features, non_adj_nf_features= class_negative_flip_rate_features(class_index,old_model, model, test_loader)
                 impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat = class_improved_negative_flip_rate_features(class_index,old_model, model, test_loader)
                 
