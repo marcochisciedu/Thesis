@@ -1,0 +1,5 @@
+# First model's name. Models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
+model_name: /New_Bottleneck3CIFAR10_100_100percent_9.9epochs:v0
+
+# Number of models to compare 
+num_models: 100

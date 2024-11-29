@@ -1,0 +1,6 @@
+model_name: /New_Bottleneck3CIFAR10_100_100percent_9.9epochs:v0
+
+# If NFR is going to be calculated and shown in the 3D plot
+nfr: True
+old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v2
+class_index : 3
