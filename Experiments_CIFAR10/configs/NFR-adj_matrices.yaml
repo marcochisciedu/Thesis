@@ -1,0 +1,7 @@
+# Name of the old model to calculate NFR
+old_model_name: /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+# New model's name. Models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
+new_model_name: /50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200
+
+# Number of new models 
+num_models: 100
