@@ -2,13 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.spatial import ConvexHull
+from scipy.spatial.distance import cosine
 import pandas as pd
 import torch
 import copy
 from sklearn.preprocessing import normalize
 
 
-# Calculates the adjacency matrix of the features
+
+# Calculates the adjacency matrix of the prototypes
 def calculate_adjacency_matrix(W):
     # Calculate the convex hull (Delaunay triangulation on the sphere)
     hull = ConvexHull(W)
@@ -59,8 +61,7 @@ def vectors_distances(W):
 
     for i in range(W.shape[0]):
         for j in range(W.shape[0]):
-            squared_dist = np.sum((W[i]- W[j])**2, axis=0)
-            distances[i][j] = np.sqrt(squared_dist)
+            distances[i][j] = cosine(W[i], W[j])
 
     return distances
 
@@ -70,31 +71,67 @@ def find_knn_vectors(distances, k):
 
     for i in range(distances.shape[0]):
         # Find indices of the k nearest vector, do not include the self-distance
-        knn_vectors[i]= np.argpartition(distances[i], k+1)[1:k+1]
+        knn_vectors[i]= distances[i].argsort()[1:k+1]
     return knn_vectors
 
-# Calculate the intersection between k nearest neighbors of all the features
-def mutual_knn_alignment_features(W_array, k):
+# Calculate the intersection between k nearest neighbors of all the prototypes
+def mutual_knn_alignment_prototypes(W_array, k):
     knn_alignment = np.zeros((W_array.shape[0], W_array.shape[0]) ,dtype= float)
     knn_vectors = []
-    # Find distances and knn vectors for each set of features
+    # Find distances and knn vectors for each set of prototypes
     for i in range(W_array.shape[0]):
         tmp_distances = vectors_distances(W_array[i])
         knn_vectors.append(find_knn_vectors(tmp_distances, k))
     
-    # Find intersection between each possible features couple
+    # Find intersection between each possible prototypes couple
     for row in range(W_array.shape[0]):
         for col in range(W_array.shape[0]):
             intersection_size = 0
             total_size = 0
-            for feature in range(k):
-                for value in knn_vectors[row][feature]:
-                    if value in knn_vectors[col][feature]:
+            for prototype in range(k):
+                for value in knn_vectors[row][prototype]:
+                    if value in knn_vectors[col][prototype]:
                         intersection_size += 1
                         total_size+= 1
                     else:
                         total_size +=1
             knn_alignment[row][col] = intersection_size/ total_size
+    
+    return knn_alignment
+
+# Convert knn_old class indices to the new model's class indices
+def old_to_new_class_indices(knn_old, indices):
+    for index in range(len(indices)):
+        for j in range(len((knn_old[index]))):
+            knn_old[index][j] = indices[knn_old[index][j]]
+       
+    return knn_old
+
+# Calculate the intersection between k nearest neighbors of a single model to all the others
+def mutual_knn_alignment_one_model_prototype(W_old, W_array, k, indices):
+    knn_alignment = np.zeros((W_array.shape[0]) ,dtype= float)
+    knn_vectors = []
+    # Find distances and knn vectors for each set of prototypes
+    for i in range(W_array.shape[0]):
+        tmp_distances = vectors_distances(W_array[i])
+        knn_vectors.append(find_knn_vectors(tmp_distances, k)[indices])
+    old_distances = vectors_distances(W_old[indices])
+    knn_old= find_knn_vectors(old_distances,k)
+    knn_old = old_to_new_class_indices(knn_old, indices)
+    
+
+    # Find intersection between each possible prototypes couple
+    for W_index in range(W_array.shape[0]):
+        intersection_size = 0
+        total_size = 0
+        for prototype in range(len(indices)):
+            for value in knn_vectors[W_index][prototype]:
+                if value in knn_old[prototype]:
+                    intersection_size += 1
+                    total_size+= 1
+                else:
+                    total_size +=1
+        knn_alignment[W_index] = intersection_size/ total_size
     
     return knn_alignment
 
@@ -141,6 +178,38 @@ def plot_alignment(knn_alignment_matrix, indices, k):
     plt.show()
 
     return fig
+
+# Given the knn alignment matrix, k, the labels and the colors print plot the alignment between the old model and 
+# each group of new models
+def plot_alignment_old_other_models(knn_alignment_vector,k, labels, colors):
+    fig, ax = plt.subplots()
+    x = [knn_alignment_vector[index] for index in range(len(knn_alignment_vector))]
+    ax.hist(x, bins = 20, range = (0,1), color= colors, label = labels, edgecolor='black', linewidth=1)
+    plt.legend(loc='upper left')
+    plt.ylim(0, knn_alignment_vector[0].shape[0])  # Set y-axis range 
+    plt.title(" Old Mutual knn alignment, k: "+ str(k))
+    plt.xlabel("Mutual knn alignement")
+    plt.ylabel("Number of models")
+    plt.tight_layout()
+    plt.show()
+
+    return fig
+
+# Simple plot of the mean alignment of each group of new models
+def plot_mean_alignments(mean_alignments, k, labels, colors):
+    mean_alignments = np.array(mean_alignments)
+    x = np.arange(len(labels))
+    fig, ax = plt.subplots()
+    ax.set(ylim=(0, 1))
+    bars=ax.bar(x, mean_alignments,color= colors, edgecolor= 'black', tick_label= labels, label = labels)
+    ax.bar_label(bars)
+    plt.title(" Mean old mutual knn alignment, k: "+ str(k))
+    plt.xlabel("New models")
+    plt.ylabel("Mean mutual knn alignment")
+    plt.show()
+
+    return fig
+
 
 # Get the features of a given class, separates them in correct predictions, negative flip between classes that are adjacent
 # and negative flips between non adjacent classes

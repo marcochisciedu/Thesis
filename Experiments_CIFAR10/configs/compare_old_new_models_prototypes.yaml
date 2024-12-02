@@ -1,0 +1,21 @@
+# List of the each first new model's name. 
+#New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
+model_names: [/NFR_CIFAR10_100_100percent_15epochs:v102, 
+/50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109,
+/50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200]
+# Labels used in the graph for each group of models
+labels : ['Standard Training', 'L2FocDis50λ', 'KLFocDis50λ']
+# Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
+colors : ['limegreen', 'firebrick', royalblue]
+
+# Number of models to compare 
+num_models: 100
+
+# Old model's name
+old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+# The old model can be trained on less classes than the new model, these are the indices of the 
+# classes shared by all the models. Must be in ascending order
+old_model_classes_indices: [5,6,7,8,9]
+
+# List of k that is going to be used
+k: [1,2,3,4]

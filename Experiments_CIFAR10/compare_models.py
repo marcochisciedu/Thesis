@@ -152,7 +152,7 @@ def main():
         # Get model with better performances
         model_v2 = make_net()
         if hyp['num_models'] > 1:
-            current_model_name = new_model_name[:-1]+str(i+int(new_model_name[-1]))
+            current_model_name = new_model_name.split(":v")[0]+":v"+str(i+int(new_model_name.split(":v")[1]))
             display_all = False
         else:
             current_model_name = new_model_name

@@ -56,7 +56,7 @@ def main():
     W_array = []
 
     for i in range(hyp['num_models']):
-        current_model_name = model_name[:-1]+str(i+int(model_name[-1]))
+        current_model_name =  model_name.split(":v")[0]+":v"+str(i+int(model_name.split(":v")[1]))
         print(current_model_name)
         # Get model
         model = make_net()
