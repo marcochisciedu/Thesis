@@ -17,6 +17,7 @@ hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
         'bias': False,          # if the last lineal layer has bias
+        'feat_dim' : 3,         # features' dimension
     },
     'algorithm':{               # algorithm hyperparameters
         'patiance': 100, 
@@ -82,6 +83,7 @@ def main():
     with open(params.config_path, 'r') as stream:
         loaded_params = yaml.safe_load(stream)
     # Modify the default hyperparameters
+    hyp['net']['feat_dim'] = loaded_params['feat_dim']
     hyp['algorithm']['patience'] = loaded_params['patience']
     hyp['algorithm']['ub'] = loaded_params['logit_upper_bound']
     hyp['algorithm']['lb'] = loaded_params['logit_lower_bound']
@@ -106,7 +108,7 @@ def main():
     classes = ('plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
     # Get model 
-    model = make_net()
+    model = make_net( hyp['net']['feat_dim'])
     artifact = wandb_run.use_artifact(WANDB_PROJECT+model_name, type='model')
     artifact_dir = artifact.download()
     model.load_state_dict(torch.load(artifact_dir+'/model.pth'))

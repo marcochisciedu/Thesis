@@ -3,6 +3,10 @@
 model_names: [/NFR_CIFAR10_100_100percent_15epochs:v102, 
 /50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109,
 /50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200]
+
+# Features' dimension, if the dSimplex is used feat_dim = num_classes -1
+feat_dim : 9
+
 # Labels used in the graph for each group of models
 labels : ['Standard Training', 'L2FocDis50λ', 'KLFocDis50λ']
 # Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'

@@ -174,7 +174,7 @@ def main():
 
     print(model_name)
     # Get model
-    model = make_net()
+    model = make_net(feat_dim= 3)
     artifact = wandb_run.use_artifact(WANDB_PROJECT+model_name, type='model')
     artifact_dir = artifact.download()
     model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
@@ -190,7 +190,7 @@ def main():
     W = model[8].weight.detach().cpu().numpy().astype(np.float32)
     # 3d plot
     if hyp['nfr'] == True:
-        old_model = make_net()
+        old_model = make_net(feat_dim= 3)
         artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
         artifact_dir = artifact.download()
         old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))

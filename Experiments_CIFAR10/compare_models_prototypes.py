@@ -16,6 +16,7 @@ from features_alignment import *
 hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
+        'feat_dim' : 3,         # features' dimension
     },
     'num_models': 100,
 }
@@ -32,6 +33,7 @@ def main():
     with open(params.config_path, 'r') as stream:
         loaded_params = yaml.safe_load(stream)
     model_name = loaded_params['model_name']
+    hyp['net']['feat_dim'] = loaded_params['feat_dim']
     hyp['num_models'] = loaded_params['num_models']
 
     # Get env variables
@@ -59,7 +61,7 @@ def main():
         current_model_name =  model_name.split(":v")[0]+":v"+str(i+int(model_name.split(":v")[1]))
         print(current_model_name)
         # Get model
-        model = make_net()
+        model = make_net(hyp['net']['feat_dim'])
         artifact = wandb_run.use_artifact(WANDB_PROJECT+current_model_name, type='model')
         artifact_dir = artifact.download()
         model.load_state_dict(torch.load(artifact_dir+'/model.pth'))

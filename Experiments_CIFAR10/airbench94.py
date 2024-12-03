@@ -21,6 +21,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
 from NFR_losses import *
+from fixed_classifiers import *
 torch.backends.cudnn.benchmark = True
 
 # We express the main training hyperparameters (batch size, learning rate, momentum, and weight decay)
@@ -59,6 +60,7 @@ hyp = {
         'batchnorm_momentum': 0.6,
         'scaling_factor': 1/9,
         'tta_level': 2,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
+        'feat_dim' : 3,         # features' dimension
     },
     'data': {
         'percentage':100,           # percentage of CIFAR10 to use
@@ -67,7 +69,8 @@ hyp = {
     },
     'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
-    'loss' : 'default' ,             # training loss used
+    'loss' : 'default' ,            # training loss used
+    'dSimplex': False,              # if the classifier is a dSimplex
     'fd' :{                         # focal distillation parameters
         'fd_alpha' : 1,
         'fd_beta' : 5,
@@ -75,6 +78,15 @@ hyp = {
         'distillation_type' : 'kl',
         'kl_temperature' : 100,
         'lambda' : 1,
+    },
+    'li':{                         # Logit Inhibition (ELODI) parameters
+        'ensemble_model' : None,
+        'num_models': 5,
+        'li_p': 2,
+        'li_compute_topk': -1,
+        'li_use_p_norm': False,
+        'lambda' :1,
+        'reduction' : 'mean',
     }
 }
 
@@ -254,7 +266,7 @@ class ConvGroup(nn.Module):
 #            Network Definition             #
 #############################################
 
-def make_net():
+def make_net(feat_dim =3):
     widths = hyp['net']['widths']
     batchnorm_momentum = hyp['net']['batchnorm_momentum']
     whiten_kernel_size = 2
@@ -267,8 +279,8 @@ def make_net():
         ConvGroup(widths['block2'], widths['block3'], batchnorm_momentum),
         nn.MaxPool2d(3),
         Flatten(),
-        nn.Linear(widths['block3'], 3, bias=False),
-        nn.Linear(3, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
+        nn.Linear(widths['block3'], feat_dim, bias=False),
+        nn.Linear(feat_dim, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
         Mul(hyp['net']['scaling_factor']),
     )
     net[0].weight.requires_grad = False
@@ -366,17 +378,31 @@ def create_prob_simplex_vertex(num_classes):
     prototypes_prob = vertex_prob - center_vertex
     return prototypes_prob
 
-
+############################################
+#            Easier model loading          #
+############################################
+def load_trained_model(model_path, wandb_run, feat_dim):
+    """
+    Load a trained model from a given path.
+    """
+    # Replace with your model architecture
+    model = make_net(feat_dim)
+    artifact = wandb_run.use_artifact(WANDB_PROJECT+model_path, type='model')
+    artifact_dir = artifact.download()
+    model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
+    model.eval()
+    return model
+       
 ############################################
 #                Training                  #
 ############################################
 
-def main(run):
+def main(model_name, run):
     print("Running "+ str(run+1) +"° training")
     # Initialize wandb
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "20lambdaL2Focal_DistillationCIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
+        name = model_name+"_CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
     
@@ -401,14 +427,23 @@ def main(run):
         train_loader.labels = torch.randint(0, 10, size=(len(train_loader.labels),), device=train_loader.labels.device)
     total_train_steps = ceil(len(train_loader) * epochs)
 
-    model = make_net()
+    model = make_net(hyp['net']['feat_dim'])
+    if hyp['dSimplex']:
+        fixed_weights = dsimplex(num_classes=10)
+        model[8].weight.requires_grad = False  # set no gradient for the fixed classifier
+        model[8].weight.copy_(fixed_weights)   # set the weights for the classifier
+
     current_steps = 0
     if hyp['nfr']:
-        old_model = make_net()
-        artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
-        artifact_dir = artifact.download()
-        old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
-        old_model.eval()
+        old_model = load_trained_model(hyp['old_model_name'], wandb_run, hyp['net']['feat_dim'])
+    if hyp['loss'] == 'Logit Inhibition':
+        model_paths = [hyp['li']['ensemble_model'][:-1]+str(i+int(hyp['li']['ensemble_model'][-1])) for i in range(hyp['li']['num_models']) ]
+
+        # Load all trained models
+        trained_models = [load_trained_model(path, wandb_run, hyp['net']['feat_dim']) for path in model_paths]
+
+        # Create the ensemble model
+        ensemble = ModelEnsemble(trained_models)
 
     norm_biases = [p for k, p in model.named_parameters() if 'norm' in k and p.requires_grad]
     other_params = [p for k, p in model.named_parameters() if 'norm' not in k and p.requires_grad]
@@ -477,6 +512,21 @@ def main(run):
                 loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
                 loss_CE = loss_fn(outputs, labels).sum()
                 loss = loss_CE + hyp['fd']['lambda']*loss_focal_distillation
+            elif hyp['loss'] == 'Logit Inhibition':
+                # Get old model's prediction
+                old_outputs = old_model(inputs)
+
+                # Get models ensemble's prediction
+                ensemble_output = ensemble(inputs)
+
+                li_loss = LogitsInhibitionLoss(hyp['li']['li_p'],hyp['li']['li_compute_topk'],
+                                                hyp['li']['li_use_p_norm'], hyp['li']['reduction'])
+                ensemble_li_loss = li_loss(outputs, ensemble_output)
+                print(f'ensemble li loss: {ensemble_li_loss}')
+                old_model_li_loss = li_loss(outputs, old_outputs)
+                lam = hyp['li']['lambda'] 
+                print(f'lambda: {lam}')
+                loss = hyp['li']['lambda']*ensemble_li_loss+ (1- hyp['li']['lambda'])* old_model_li_loss
             else:
                 loss = loss_fn(outputs, labels).sum()
             optimizer.zero_grad(set_to_none=True)
@@ -535,7 +585,7 @@ def main(run):
     
     # Save the model on weights and biases as an artifact
     model_artifact = wandb.Artifact(
-                 "20lambdaL2Focal_Distillation_CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
+                 model_name+"_CIFAR10_"+ str(hyp['data']['percentage'])+"_" + str(hyp['data']['low_percentage'])[1:-1].replace(" ", "").replace(",", "_")
                  + "percent_"+str(hyp['opt']['train_epochs'])+ "epochs", type="model",
                 description="model trained on run "+ str(run),
                 metadata=dict(hyp))
@@ -571,12 +621,16 @@ if __name__ == "__main__":
 
     with open(params.config_path, 'r') as stream:
         loaded_params = yaml.safe_load(stream)
+    model_name = loaded_params['model_name']
+    num_models = loaded_params['num_models']
     # Modify the default hyperparameters
     hyp['data']['percentage'] = loaded_params['percentage']
     hyp['opt']['train_epochs'] = loaded_params['epochs']
     hyp['data']['low_classes'] = loaded_params['low_class_list']
     hyp['data']['low_percentage'] = loaded_params['low_percentage']
     hyp['nfr'] = loaded_params['nfr']
+    hyp['net']['feat_dim'] = loaded_params['feat_dim']
+    hyp['dSimplex'] = loaded_params['dSimplex']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
     hyp['loss'] = loaded_params['loss']
@@ -587,9 +641,17 @@ if __name__ == "__main__":
         hyp['fd']['distillation_type'] = loaded_params['distillation_type']
         hyp['fd']['kl_temperature'] = loaded_params['kl_temperature']
         hyp['fd']['lambda'] = loaded_params['lambda']
+    if hyp['loss'] == 'Logit Inhibition':
+        hyp['li']['ensemble_model'] =loaded_params['ensemble_model']
+        hyp['li']['num_models'] =loaded_params['num_models']
+        hyp['li']['li_p'] =loaded_params['li_p']
+        hyp['li']['li_compute_topk'] =loaded_params['li_compute_topk']
+        hyp['li']['li_use_p_norm'] =loaded_params['li_use_p_norm']
+        hyp['li']['lambda'] = loaded_params['lambda']
+        hyp['li']['reduction'] = loaded_params['reduction']
 
     # How many times the main is runned
-    accs = torch.tensor([main(run) for run in range(100)])
+    accs = torch.tensor([main(model_name, run) for run in range(num_models)])
 
     # Log mean and std
     wandb_run=wandb.init(
