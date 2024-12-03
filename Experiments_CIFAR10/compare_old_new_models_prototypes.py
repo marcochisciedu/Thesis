@@ -12,6 +12,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
 from features_alignment import *
+from print_and_logging import *
 
 
 hyp = {
@@ -59,6 +60,7 @@ def main():
     
     # Get test images
     test_loader = CifarLoader('cifar10', train=False, batch_size=2000)
+    classes = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
     W_array = []
     for name_index in range(len(model_names)):
@@ -109,17 +111,43 @@ def main():
         wandb.log({'Mean old mutual knn alignment, k:' + str(k): wandb.Image(fig_mean)})
 
     old_distances = vectors_distances(W_old)
-    df_old_distances = pd.DataFrame(old_distances)   
-    print(f'old distances: \n {df_old_distances}')
-    mean_distances = []
+    df_old_distances , fig_old_distances = df_plot_heatmap(old_distances, classes, "Distances between old model class prototypes", 'Purples', '.1f',
+                                                           "", "", center =1, vmin= 0, vmax = 2)
+    print_and_log(df_old_distances, fig_old_distances,"Distances between old model class prototypes" )
+    mean_compare_distances = []
+    mean_compare_distances_only_indices = []
+    mean_origin_distances = []
+    mean_origin_distances.append( origin_distances(W_old))
     for name_index in range(len(model_names)):
         distances = []
+        origin_distance =[]
         for i in range(hyp['num_models']):
             distances.append(vectors_distances(W_array[name_index*hyp['num_models']: name_index*hyp['num_models']+hyp['num_models'],:][i]))
+            origin_distance.append(origin_distances(W_array[name_index*hyp['num_models']: name_index*hyp['num_models']+hyp['num_models'],:][i]))
+        mean_origin_distances.append(np.mean(np.array(origin_distance),0))
         mean_distance = np.mean(np.array(distances),0)
-        mean_distances.append(mean_distance)
-        df_mean_distance = pd.DataFrame(mean_distance)   
-        print(f'distance {name_index+1}° group of models: \n {df_mean_distance}')
+        df_mean_distance, fig_mean_distance =  df_plot_heatmap(mean_distance, classes, 
+                                                               "Mean distances between class prototypes in " +  model_names[name_index].split(":v")[0],
+                                                               'Purples', '.1f',  "", "", center=1, vmin= 0, vmax = 2)
+        print_and_log(df_mean_distance, fig_mean_distance,"Mean distances between class prototypes in " +  model_names[name_index].split(":v")[0] )
+        compare_old_new_distances = np.absolute(old_distances-mean_distance)
+        df_compare, fig_compare =  df_plot_heatmap(compare_old_new_distances, classes, 
+                                                               "Absolute distance between old model and " +  model_names[name_index].split(":v")[0]+ " prototype distances",
+                                                               'Reds', '.1f',  "", "", center=1, vmin= 0, vmax = 2)
+        print_and_log(df_compare, fig_compare,"Absolute distance between old model and " +  model_names[name_index].split(":v")[0]+ " prototype distances" )
+        mean_compare_distances.append( np.mean(compare_old_new_distances))
+        compare_old_new_distances_only_indices = compare_old_new_distances[hyp['old_model_classes_indices'] ][:, hyp['old_model_classes_indices']]
+        mean_compare_distance_only_indices = np.mean(compare_old_new_distances_only_indices)
+        mean_compare_distances_only_indices.append(mean_compare_distance_only_indices)
+    fig_mean_comp_distances = bar_plot(mean_compare_distances, labels, colors, "Mean of the distances between old and new models prototypes", "New models", 
+                                       "Mean distance", (0,2))
+    wandb.log({'Mean of the distances between old and new models prototypes': wandb.Image(fig_mean_comp_distances)})
+    fig_mean_comp_distances_only_indices = bar_plot(mean_compare_distances_only_indices, labels, colors, "Mean of the distances between old-new models prototypes, old indices", "New models", 
+                                       "Mean distance", (0,2))
+    wandb.log({'Mean of the distances between old-new models prototypes, old model indices': wandb.Image(fig_mean_comp_distances_only_indices)})
+    df_origin, fig_origin = df_plot_heatmap(mean_origin_distances, classes, "Origin distances", "Blues", '.1f', "Classes", "Models", 
+                                            index = ['Old model']+ labels, columns = [i for i in classes])
+    print_and_log(df_origin, fig_origin, "Origin distances")
     wandb_run.finish()
     
 

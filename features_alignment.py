@@ -65,6 +65,13 @@ def vectors_distances(W):
 
     return distances
 
+def origin_distances(W):
+    distances = np.zeros(W.shape[0])
+
+    for i in range(W.shape[0]):
+        distances[i] = np.linalg.norm(W[i])
+    return distances
+
 # Find the k nearest neighbors of each vector given their distances
 def find_knn_vectors(distances, k):
     knn_vectors= np.empty((distances.shape[0]), dtype= object)
@@ -194,7 +201,7 @@ def plot_alignment_old_other_models(knn_alignment_vector,k, labels, colors):
     plt.show()
 
     return fig
-
+#TODO: da sostituire con bar plot di print e loggin, guardare se ha senso farlo anche per altre funzioni
 # Simple plot of the mean alignment of each group of new models
 def plot_mean_alignments(mean_alignments, k, labels, colors):
     mean_alignments = np.array(mean_alignments)
