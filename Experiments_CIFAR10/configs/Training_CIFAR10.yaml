@@ -1,5 +1,5 @@
 # Name of the trained model
-model_name : No_dSimplexFull
+model_name : No_dSimplx_old_No_dSimplexFull
 
 # Number of models that are going to be trained
 num_models : 100
@@ -20,6 +20,6 @@ dSimplex : False
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model : /dSimplexSecondHalf_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_model : /No_dSimplexHalf_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
 
 loss: 'default'

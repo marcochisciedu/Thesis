@@ -195,7 +195,7 @@ def main():
         artifact_dir = artifact.download()
         old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
         correct_features, adj_nf_features, non_adj_nf_features= class_negative_flip_rate_features(hyp['class_index'],old_model, model, test_loader)
-        impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat = class_improved_negative_flip_rate_features(hyp['class_index'],old_model, model, test_loader)
+        impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat = class_negative_flip_rate_features(hyp['class_index'],old_model, model, test_loader, impr = True)
         
         vect_feat_fig= vector_features_plot(W,correct_features, adj_nf_features, non_adj_nf_features, classes)
         impr_vect_feat_fig = vector_features_plot(W,  impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat, classes )

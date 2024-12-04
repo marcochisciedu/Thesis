@@ -1,4 +1,6 @@
+# Name of the model to 3D plot
 model_name: /50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109
 
-# If NFR is going to be calculated and shown in the 3D plot
+# If the negative flip are going to be calculated and shown in the 3D plot, if false the prototypes'
+# convex hull is shown
 nfr: False
