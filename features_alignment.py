@@ -89,7 +89,23 @@ def find_knn_vectors(distances, k):
         # Find indices of the k nearest vector, do not include the self-distance
         knn_vectors[i]= distances[i].argsort()[1:k+1]
     return knn_vectors
+# Calculate the intersection between the k nearest neighbors of two model's features
+def mutual_knn_alignment_features(features_v1, features_v2, k):
+    # Normalize the features to avoid overflow while calculating cosine distances
+    distances_v1 = vectors_distances(normalize(features_v1, axis=1, norm='l2'))
+    knn_vectors_v1 = find_knn_vectors(distances_v1, k)
 
+    distances_v2 = vectors_distances(normalize(features_v2, axis=1, norm='l2'))
+    knn_vectors_v2 = find_knn_vectors(distances_v2, k)
+    
+    # Calculate the intersection between each features' knn
+    intersection = 0
+    for i in range(len(knn_vectors_v1)):  # iterate through the features
+        for value in knn_vectors_v1[i]:   # iterate through each nearest neighbor
+            if value in knn_vectors_v2[i]:
+                intersection += 1
+                
+    return intersection/k
 
 # Convert old class indices to the new model's class indices
 def old_to_new_class_indices(knn_old, indices):
@@ -129,20 +145,19 @@ def mutual_knn_alignment_one_model_prototype(W_old, W_array, k, indices):
 
 # Given the knn alignment vector, k, the labels and the colors, plot the alignment between the old model and 
 # each group of new models
-def plot_alignment_old_other_models(knn_alignment_vector,k, labels, colors):
+def plot_alignment_old_other_models(knn_alignment_vector,k, title, labels, colors):
     fig, ax = plt.subplots()
     x = [knn_alignment_vector[index] for index in range(len(knn_alignment_vector))]
     ax.hist(x, bins = 20, range = (0,1), color= colors, label = labels, edgecolor='black', linewidth=1)
     plt.legend(loc='upper left')
     plt.ylim(0, knn_alignment_vector[0].shape[0])  # Set y-axis range 
-    plt.title(" Old Mutual knn alignment, k: "+ str(k))
+    plt.title(title)
     plt.xlabel("Mutual knn alignement")
     plt.ylabel("Number of models")
     plt.tight_layout()
     plt.show()
 
     return fig
-
 
 # Calculate the intersection between k nearest neighbors of all the prototypes
 def mutual_knn_alignment_prototypes(W_array, k):

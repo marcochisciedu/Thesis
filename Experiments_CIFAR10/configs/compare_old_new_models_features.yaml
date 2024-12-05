@@ -1,0 +1,30 @@
+# Name of the wandb run
+run_name: "Comparing dSimplex features, batch size: 100"
+
+# List of the each first new model's name. 
+#New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
+model_names: [/dSimplexFull_CIFAR10_100_onpercent_15epochs:v0, 
+/No_dSimplexFull_CIFAR10_100_onpercent_15epochs:v0]
+
+# Features' dimension, if the dSimplex is used feat_dim = num_classes -1
+feat_dim : 9
+
+# Batch size, how many features are compared together
+batch_size: 100
+
+# Labels used in the graph for each group of models
+labels : ['dSimplex', 'No dSimplex']
+# Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
+colors : ['limegreen', 'firebrick']
+
+# Number of models to compare 
+num_models: 100
+
+# Old model's name
+old_model : /dSimplexSecondHalf_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+# The old model can be trained on less classes than the new model, these are the indices of the 
+# classes shared by all the models. Must be in ascending order
+old_model_classes_indices: [5,6,7,8,9]
+
+# Used k
+k: 20

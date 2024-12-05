@@ -110,7 +110,7 @@ def main():
             knn_alignments.append(old_knn_alignment)
         
         # Plot the alignment between every group of new models and the old one
-        fig_old = plot_alignment_old_other_models(knn_alignments, k, labels, colors)
+        fig_old = plot_alignment_old_other_models(knn_alignments, k, 'Old mutual knn alignment, k:' + str(k) ,labels, colors)
         wandb.log({'Old mutual knn alignment, k:' + str(k): wandb.Image(fig_old)})
         # Plot the mean alignment of each group of new models
         fig_mean= bar_plot(mean_alignments, labels, colors, " Mean old mutual knn alignment, k: "+ str(k),
