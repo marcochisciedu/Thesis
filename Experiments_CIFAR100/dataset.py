@@ -28,8 +28,8 @@ class CIFAR100Subset(tv.datasets.CIFAR100):
         return super().__getitem__(self.aligned_indices[item])
 
 # Returns train and validation datasets
-def load_dataset(dataset, path, batch_size, input_size=32, subset_list = None,
-                  batch_split = 1, num_workers = 0):
+def load_datasets(dataset, path, batch_size, input_size=32, subset_list = None,
+                 num_workers = 0):
 
     if dataset == "cifar10":
         transform = tv.transforms.Compose([tv.transforms.Resize((input_size, input_size)),
@@ -77,22 +77,14 @@ def load_dataset(dataset, path, batch_size, input_size=32, subset_list = None,
     print(f"Using a training set with {len(train_set)} images.")
     print(f"Using a validation set with {len(valid_set)} images.")
 
-    micro_batch_size = batch_size// batch_split
 
     valid_loader = torch.utils.data.DataLoader(
-        valid_set, batch_size=micro_batch_size, shuffle=False,
+        valid_set, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, pin_memory=True, drop_last=False)
 
-    if micro_batch_size <= len(train_set):
-        train_loader = torch.utils.data.DataLoader(
-            train_set, batch_size=micro_batch_size, shuffle=True,
-            num_workers=num_workers, pin_memory=True, drop_last=False)
-    else:
-        # In the few-shot cases, the total dataset size might be smaller than the batch-size.
-        # In these cases, the default sampler doesn't repeat, so we need to make it do that
-        # if we want to match the behaviour from the paper.
-        train_loader = torch.utils.data.DataLoader(
-            train_set, batch_size=micro_batch_size, num_workers=num_workers, pin_memory=True,
-            sampler=torch.utils.data.RandomSampler(train_set, replacement=True, num_samples=micro_batch_size))
 
-    return train_set, valid_set, train_loader, valid_loader
+    train_loader = torch.utils.data.DataLoader(
+        train_set, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, pin_memory=True, drop_last=False)
+
+    return  train_loader, valid_loader
