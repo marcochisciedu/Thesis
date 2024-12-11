@@ -1,4 +1,4 @@
-wandb_name: "Training CIFAR100 w/ first 50 classes"
+wandb_name: "Training CIFAR100 first 50 classes"
 
 # Training hyperparameters
 train_epochs : 200
@@ -10,11 +10,11 @@ weight_decay : 5.0e-4
 
 # ResNet parameters
 backbone: 'resnet18'
-feat_dim : 3             
+feat_dim : 512
 pretrained : False
 
 # Dataset parameters
-num_classes : 50
+num_classes : 100
 subset_list : [0,50,1]    #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
 
 # Number of models that are going to be trained
@@ -25,7 +25,8 @@ seed : 111
 
 # If NFR is going to be calculated after each epoch
 nfr: False
-old_model_name : None
+old_model_name : null
+old_subset_list: null
 
 loss: 'default'
 

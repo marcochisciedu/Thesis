@@ -11,3 +11,4 @@ cifar10/
 
 #models
 model.pth
+best_model.pth

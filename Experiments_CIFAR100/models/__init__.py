@@ -19,14 +19,14 @@ def get_backbone_feat_size(backbone):
         raise ValueError('Backbone not supported: {}'.format(backbone))
     return __BACKBONE_OUT_DIM[backbone]
 
-
-def extract_features(device, net, loader, return_labels=False):
+# To extract features from a net given a dataloader
+def extract_features(device, net, dataloader, return_labels=False):
     features = None
     labels = None
     net.eval()
     with torch.no_grad():
-        for inputs in loader:
-            images = inputs[0].to(device)
+        for inputs in dataloader:
+            images = inputs.cuda()
             with torch.autocast(device_type='cuda', dtype=torch.float16):
                 f = net(images)['features']     # net forward returns a dict 
             f = l2_norm(f)
@@ -40,7 +40,7 @@ def extract_features(device, net, loader, return_labels=False):
         return features.detach().cpu(), labels.detach().cpu()
     return features.detach().cpu().numpy()
 
-
+# Uses the ResNet backbone and adds the needed fc layers to achieve the requested feat_size and num_classes
 class Incremental_ResNet(nn.Module):
     def __init__(self, 
                  num_classes=100, 
@@ -52,6 +52,7 @@ class Incremental_ResNet(nn.Module):
         super(Incremental_ResNet, self).__init__()
         self.feat_size = feat_size
         
+        # Select backbone
         if backbone == 'resnet18':
             self.backbone = resnet18(pretrained)
         elif backbone == 'resnet34':
@@ -70,6 +71,7 @@ class Incremental_ResNet(nn.Module):
         
         self.fc1 = None 
         self.fc2 = None
+        # Add fc1 if the features size needs to be adjusted
         if self.out_dim != self.feat_size:
             print(f"add a linear layer from {self.out_dim} to {self.feat_size}")
             self.fc1 = nn.Linear(self.out_dim, self.feat_size, bias=False)
@@ -96,18 +98,18 @@ class Incremental_ResNet(nn.Module):
             return x, y, z
 
 # Creates an Incremental ResNet given the backbone, if pretrained, feature size and num classes
-# If the model weights need to be loaded, load path need to be "WANDB_PROJECT+model_path" and wandb_run cannot be None
+# If the model weights need to be loaded, load path needs to be "WANDB_PROJECT+model_path" and wandb_run cannot be None
 def create_model(backbone, pretrained, feat_size, num_classes, device, load_path=None, wandb_run = None):
 
     print(f"Creating model with {num_classes} classes and {feat_size} features")
 
     model = Incremental_ResNet(num_classes, feat_size, backbone, pretrained)
 
-    if load_path is not None:
+    if load_path != None and wandb_run != None:
         print(f"Loading Weights from {load_path}")
         artifact = wandb_run.use_artifact(load_path, type='model')
         artifact_dir = artifact.download()
-        model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
+        model.load_state_dict(torch.load(artifact_dir+'/best_model.pth'))
     
     model.to(device=device)
 

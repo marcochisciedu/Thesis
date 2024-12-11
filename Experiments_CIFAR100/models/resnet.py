@@ -54,7 +54,6 @@ class BasicBlock(nn.Module):
 
         return out
 
-
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -108,6 +107,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        # There is no fc layer, use this net as a backbone
         self.out_dim = 512 * block.expansion
 
         for m in self.modules():
@@ -159,7 +159,7 @@ class ResNet(nn.Module):
         # no fc layer, added later to control feat_dim 
         return x
     
-
+# All the possible ResNets, if pretrained load all the weights and biases except the fc ones (there is no fc layer)
 def resnet18(pretrained=False, **kwargs):
     """Constructs a ResNet-18 model.
 

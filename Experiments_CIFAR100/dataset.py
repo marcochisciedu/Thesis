@@ -27,10 +27,9 @@ class CIFAR100Subset(tv.datasets.CIFAR100):
     def __getitem__(self, item):
         return super().__getitem__(self.aligned_indices[item])
 
-# Returns train and validation datasets
-def load_datasets(dataset, path, batch_size, input_size=32, subset_list = None,
+# Creates and returns train and validation dataloaders
+def create_dataloaders(dataset, path, batch_size, input_size=32, subset_list = None,
                  num_workers = 0):
-
     if dataset == "cifar10":
         transform = tv.transforms.Compose([tv.transforms.Resize((input_size, input_size)),
                                     tv.transforms.ToTensor(),
@@ -51,23 +50,25 @@ def load_datasets(dataset, path, batch_size, input_size=32, subset_list = None,
                                 transform=transform
                                 )    
     elif dataset == "cifar100":
-        train_transform = [tv.transforms.Resize((input_size, input_size)),
+        train_transform = tv.transforms.Compose(
+                        [tv.transforms.Resize((input_size, input_size)),
                         tv.transforms.RandomCrop(input_size, padding=4),
                         tv.transforms.RandomHorizontalFlip(),
                         tv.transforms.ToTensor(),
                         tv.transforms.Normalize((0.5071, 0.4867, 0.4408),
                                             (0.2675, 0.2565, 0.2761))
-                        ]
-        val_transform = [tv.transforms.Resize((input_size, input_size)),
+                        ])
+        val_transform =tv.transforms.Compose(
+                    [tv.transforms.Resize((input_size, input_size)),
                     tv.transforms.ToTensor(),
                     tv.transforms.Normalize((0.5071, 0.4867, 0.4408),
-                                        (0.2675, 0.2565, 0.2761))
-                    ]
+                                        (0.2675, 0.2565, 0.2761))])
         if subset_list == None:
             train_set = tv.datasets.CIFAR100(data_path = path, transform=train_transform, train=True, download=True)
             valid_set = tv.datasets.CIFAR100(data_path = path, transform=val_transform, train=False, download=True)
-        else:
+        else:         # take a Subset of CIFAR100
             train_set = CIFAR100Subset(subset=subset_list ,root=path, train=True, download=True, transform=train_transform)
+            print(f'Cifar100 subset classes: {train_set.get_class_names()}')
             valid_set = CIFAR100Subset(subset=subset_list ,root=path, train=False, download=True, transform=val_transform)
     else:
         raise ValueError(f"Sorry, we have not spent time implementing the "
@@ -76,15 +77,12 @@ def load_datasets(dataset, path, batch_size, input_size=32, subset_list = None,
 
     print(f"Using a training set with {len(train_set)} images.")
     print(f"Using a validation set with {len(valid_set)} images.")
-
-
-    valid_loader = torch.utils.data.DataLoader(
-        valid_set, batch_size=batch_size, shuffle=False,
-        num_workers=num_workers, pin_memory=True, drop_last=False)
-
-
-    train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=batch_size, shuffle=True,
-        num_workers=num_workers, pin_memory=True, drop_last=False)
+    
+    # Create dataloaders
+    train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True,
+                                                num_workers=num_workers, pin_memory=True, drop_last=False)
+    
+    valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=batch_size, shuffle=False,
+                                                num_workers=num_workers, pin_memory=True, drop_last=False)
 
     return  train_loader, valid_loader

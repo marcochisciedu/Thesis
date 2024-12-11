@@ -1,7 +1,7 @@
 import torch
 
 # Calculates regular negative flip rate 
-def negative_flip_rate(model_v1, model_v2, test_loader):
+def negative_flip_rate(model_v1, model_v2, test_loader, dict_output = False):
     negative_flips= 0
     total = 0
     flips ={}
@@ -14,10 +14,14 @@ def negative_flip_rate(model_v1, model_v2, test_loader):
             inputs, labels = data
 
             # Get both models outputs
-            logits_v1 = model_v1(inputs)
-            output_v1 = logits_v1.argmax(1)
+            if dict_output:
+                logits_v1 = model_v1(inputs)['logits']
+                logits_v2 = model_v2(inputs)['logits']
+            else:
+                logits_v1 = model_v1(inputs)
+                logits_v2 = model_v2(inputs)
 
-            logits_v2 = model_v2(inputs)
+            output_v1 = logits_v1.argmax(1)
             output_v2 = logits_v2.argmax(1)
 
             # Negative flip if model_v2 is wrong while model_v1 is correct
@@ -36,7 +40,7 @@ def negative_flip_rate(model_v1, model_v2, test_loader):
     return (negative_flips/total), flips, negative_flips
 
 # Calculates an improved version of NFR, accounts for flips when both models are incorrect
-def improved_negative_flip_rate(model_v1, model_v2, test_loader):
+def improved_negative_flip_rate(model_v1, model_v2, test_loader, dict_output = False):
     negative_flips= 0
     total = 0
     flips = {}
@@ -49,10 +53,14 @@ def improved_negative_flip_rate(model_v1, model_v2, test_loader):
             inputs, labels = data
 
             # Get both models outputs
-            logits_v1 = model_v1(inputs)
-            output_v1 = logits_v1.argmax(1)
+            if dict_output:
+                logits_v1 = model_v1(inputs)['logits']
+                logits_v2 = model_v2(inputs)['logits']
+            else:
+                logits_v1 = model_v1(inputs)
+                logits_v2 = model_v2(inputs)
 
-            logits_v2 = model_v2(inputs)
+            output_v1 = logits_v1.argmax(1)
             output_v2 = logits_v2.argmax(1)
             
             # Negative flip if model_v2 is incorrect and its prediction is not the same as model_v1
