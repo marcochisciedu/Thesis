@@ -26,7 +26,7 @@ def extract_features(device, net, dataloader, return_labels=False):
     net.eval()
     with torch.no_grad():
         for inputs in dataloader:
-            images = inputs.cuda()
+            images = inputs[0].cuda()
             with torch.autocast(device_type='cuda', dtype=torch.float16):
                 f = net(images)['features']     # net forward returns a dict 
             f = l2_norm(f)

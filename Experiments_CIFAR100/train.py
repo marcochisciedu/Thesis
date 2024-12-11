@@ -67,7 +67,8 @@ def define_hyp(loaded_params):
     hyp['net']['feat_dim'] = loaded_params['feat_dim']
     hyp['data']['num_classes'] = loaded_params['num_classes']
     subset_list = loaded_params['subset_list']
-    hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
+    if subset_list is not None:
+        hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
     hyp['num_models'] = loaded_params['num_models']
 
     hyp['opt']['train_epochs'] = loaded_params['train_epochs']
@@ -81,7 +82,8 @@ def define_hyp(loaded_params):
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr'] or hyp['loss'] != 'default': 
         hyp['old_model_name'] = loaded_params['old_model_name']
-        hyp['data']['old_subset_list'] = loaded_params['old_subset_list']
+        old_subset_list = loaded_params['old_subset_list']
+        hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
     
     if hyp['loss'] == 'Focal Distillation':
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
@@ -199,6 +201,7 @@ def main():
             old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
                                      device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
             # Get the correct dataset to test the NFR
+            print(f'Creating and loading Negative Flip Rate dataset')
             _, cifar100_nfr_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
         else:
             old_model = None
@@ -207,6 +210,7 @@ def main():
         model = create_model( hyp['net']['backbone'], hyp['net']['pretrained'], hyp['net']['feat_dim'],hyp['data']['num_classes'], device )
 
         # Create the dataloaders
+        print(f'Creating and loading training and testing dataloaders')
         cifar100_train_loader, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH, hyp['opt']['batch_size'], 
                                                                     subset_list= hyp['data']['subset_list'])
 
@@ -249,6 +253,7 @@ def main():
         wandb.save("best_model.pth")
         wandb_run.log_artifact(best_model_artifact)
 
+        wandb.finish()
 
 
 if __name__ == '__main__':

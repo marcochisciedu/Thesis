@@ -15,6 +15,9 @@ def negative_flip_rate(model_v1, model_v2, test_loader, dict_output = False):
 
             # Get both models outputs
             if dict_output:
+                labels = labels.cuda()
+                inputs = inputs.cuda()
+
                 logits_v1 = model_v1(inputs)['logits']
                 logits_v2 = model_v2(inputs)['logits']
             else:
@@ -54,6 +57,9 @@ def improved_negative_flip_rate(model_v1, model_v2, test_loader, dict_output = F
 
             # Get both models outputs
             if dict_output:
+                labels = labels.cuda()
+                inputs = inputs.cuda()
+                
                 logits_v1 = model_v1(inputs)['logits']
                 logits_v2 = model_v2(inputs)['logits']
             else:

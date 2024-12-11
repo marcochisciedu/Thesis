@@ -49,7 +49,7 @@ def define_hyp(loaded_params):
 
 # Function that tests the final model, returns top1 and top5 accuracy
 @torch.no_grad()
-def test(model, dataloader, wandb_run):
+def test_model(model, dataloader, wandb_run):
 
     model.eval()
 
@@ -132,7 +132,7 @@ def main():
     _, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH, hyp['opt']['batch_size'], 
                                                                 subset_list= hyp['data']['subset_list'])
     # Test the loaded model
-    test(model, cifar100_test_loader , wandb_run)
+    test_model(model, cifar100_test_loader , wandb_run)
 
     # Calculate NFR       
     if hyp['nfr']:  

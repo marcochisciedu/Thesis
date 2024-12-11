@@ -64,8 +64,8 @@ def create_dataloaders(dataset, path, batch_size, input_size=32, subset_list = N
                     tv.transforms.Normalize((0.5071, 0.4867, 0.4408),
                                         (0.2675, 0.2565, 0.2761))])
         if subset_list == None:
-            train_set = tv.datasets.CIFAR100(data_path = path, transform=train_transform, train=True, download=True)
-            valid_set = tv.datasets.CIFAR100(data_path = path, transform=val_transform, train=False, download=True)
+            train_set = tv.datasets.CIFAR100(root = path, transform=train_transform, train=True, download=True)
+            valid_set = tv.datasets.CIFAR100(root = path, transform=val_transform, train=False, download=True)
         else:         # take a Subset of CIFAR100
             train_set = CIFAR100Subset(subset=subset_list ,root=path, train=True, download=True, transform=train_transform)
             print(f'Cifar100 subset classes: {train_set.get_class_names()}')
