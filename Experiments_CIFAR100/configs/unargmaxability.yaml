@@ -1,0 +1,16 @@
+# Name of the model to search unargmaxability on
+model_name: /Training_feat_dim_3_CIFAR100_first_50_classes:v0
+
+# ResNet parameters
+backbone: 'resnet18'
+feat_dim : 3 
+bias : False
+
+# Number of swaps to attempt before giving up
+patience: 100
+
+# Largest possible logit activatio
+logit_upper_bound: 100
+
+# Smallest possible logit activation
+logit_lower_bound : -100
