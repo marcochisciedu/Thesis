@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cosine
-import pandas as pd
 import torch
 import copy
 from sklearn.preprocessing import normalize
@@ -267,6 +265,67 @@ def class_negative_flip_rate_features(class_index, model_v1, model_v2, test_load
             logits_v2 = model_v2(inputs[class_indices])
             output_v2 = logits_v2.argmax(1)
             features_v2 = model_features_v2(inputs[class_indices])
+            # Indices of correct predictions
+            correct_indices = (output_v2 == class_index).nonzero(as_tuple=True)[0]
+            correct_features = features_v2[correct_indices]
+            all_correct_feat.extend(correct_features.cpu().numpy())
+            
+            if impr:
+                # Improved negative flip if model_v2 is incorrect and its prediction is not the same as model_v1
+                flipping = torch.logical_and(output_v2 != labels[class_indices],output_v2 != output_v1) 
+            else:
+                # Negative flip if model_v2 is wrong while model_v1 is correct
+                flipping = torch.logical_and(output_v2 != labels[class_indices], output_v1 == labels[class_indices])
+
+            flipping_adj = torch.logical_and(flipping, torch.isin(output_v2, torch.tensor(np.array(adj_indices)).cuda()))
+            flipping_non_adj = torch.logical_and(flipping, torch.isin(output_v2, torch.tensor(np.array(non_adj_indices)).cuda()))
+            
+            # Features that correspond to negative flips, adjacent and non
+            flip_indices_adj = flipping_adj.nonzero(as_tuple=True)[0]
+            adj_nf_features = features_v2[flip_indices_adj]
+            all_adj_flip_feat.extend(adj_nf_features.cpu().numpy())
+            flip_indices_non_adj = flipping_non_adj.nonzero(as_tuple=True)[0]
+            non_adj_nf_features = features_v2[flip_indices_non_adj]
+            all_non_adj_flip_feat.extend(non_adj_nf_features.cpu().numpy())
+
+            
+    # Normalize all the features
+    all_correct_feat = normalize(np.array(all_correct_feat), axis=1, norm='l2')
+    all_adj_flip_feat = normalize(np.array(all_adj_flip_feat), axis=1, norm='l2')
+    all_non_adj_flip_feat = normalize(np.array(all_non_adj_flip_feat), axis=1, norm='l2')
+
+    return all_correct_feat, all_adj_flip_feat, all_non_adj_flip_feat
+
+def class_negative_flip_rate_features_ResNet(class_index, model_v1, model_v2, test_loader, impr= False):
+    all_correct_feat = []
+    all_adj_flip_feat= []
+    all_non_adj_flip_feat = []
+
+    # Calculate adjacency matrix
+    W_v2 = model_v2.fc2.weight.detach().cpu().numpy().astype(np.float32)
+    adj_mat_v2 = calculate_adjacency_matrix(W_v2)
+    # Indices of classes that are adjacent to the given class index
+    adj_indices = (adj_mat_v2[class_index] == 1).nonzero()
+    non_adj_indices = (adj_mat_v2[class_index] == 0).nonzero()
+
+    model_v1.eval()
+    model_v2.eval()
+
+    with torch.no_grad():
+        for data in test_loader:
+            inputs, labels = data
+            inputs = inputs.cuda()
+            labels = labels.cuda()
+            # Use only the inputs of the selected class
+            class_indices=(labels == class_index).nonzero(as_tuple=True)[0]
+
+            # Get both models outputs and the features of the new model
+            logits_v1 = model_v1(inputs[class_indices])['logits']
+            output_v1 = logits_v1.argmax(1)
+
+            logits_v2 = model_v2(inputs[class_indices])['logits']
+            output_v2 = logits_v2.argmax(1)
+            features_v2 =  model_v2(inputs[class_indices])['features']
             # Indices of correct predictions
             correct_indices = (output_v2 == class_index).nonzero(as_tuple=True)[0]
             correct_features = features_v2[correct_indices]

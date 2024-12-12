@@ -1,0 +1,24 @@
+# Name of the model to 3D plot
+model_name: /Training_feat_dim_3_full_CIFAR100:v0
+
+# If the negative flip are going to be calculated and shown in the 3D plot, if false the prototypes'
+# convex hull is shown
+nfr: False
+old_model_name : null
+old_subset_list: null
+
+# If a convex hull is added to the 3D plot, only possible if there is no negative flips calculations
+add_convex_hull : False
+
+# Testing dataloader's batch size
+batch_size : 128
+
+# ResNet parameters
+backbone: 'resnet18'
+
+# Dataset parameters
+num_classes : 100
+subset_list : [0,50,1]    #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
+
+# If the classifier is a dSimplex
+dSimplex : False

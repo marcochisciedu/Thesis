@@ -37,14 +37,16 @@ def define_hyp(loaded_params):
     hyp['net']['feat_dim'] = loaded_params['feat_dim']
     hyp['data']['num_classes'] = loaded_params['num_classes']
     subset_list = loaded_params['subset_list']
-    hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
+    if subset_list is not None:
+        hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
 
     hyp['opt']['batch_size'] = loaded_params['batch_size']
    
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr']: 
         hyp['old_model_name'] = loaded_params['old_model_name']
-        hyp['data']['old_subset_list'] = loaded_params['old_subset_list']
+        old_subset_list = loaded_params['old_subset_list']
+        hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
     
 
 # Function that tests the final model, returns top1 and top5 accuracy
