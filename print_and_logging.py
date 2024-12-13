@@ -11,7 +11,8 @@ def print_and_log(df, fig, title):
 
 # Simple function that creates a dataframe given a matrix, and plots its heatmap.
 # Only creates the figure if it is going to be used
-def df_plot_heatmap(matrix, classes, title, cmap, fmt, xlabel, ylabel, center=None,vmin=None, vmax=None, display= True, index = None, columns =None):
+def df_plot_heatmap(matrix, classes, title, cmap, fmt, xlabel, ylabel, center=None,vmin=None, vmax=None, display= True, index = None, columns =None,
+                    figsize = (12,7), annot = True):
     # The model's classes are index and columns default value
     if index == None:
         index = classes
@@ -22,8 +23,8 @@ def df_plot_heatmap(matrix, classes, title, cmap, fmt, xlabel, ylabel, center=No
     df = pd.DataFrame(matrix, index = index, columns = columns)
     # Create the heatmap
     if display:
-        fig=plt.figure(figsize = (12,7))
-        sns.heatmap(df, cmap=cmap, annot=True, fmt=fmt, linewidth=.5,vmin= vmin, vmax=vmax, center=center, square= True, robust= True)
+        fig=plt.figure(figsize = figsize)
+        sns.heatmap(df, cmap=cmap, annot=annot, fmt=fmt, linewidth=.5,vmin= vmin, vmax=vmax, center=center, square= True, robust= True)
         plt.title(title)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)

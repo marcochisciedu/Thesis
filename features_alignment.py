@@ -34,7 +34,7 @@ def calculate_adjacency_matrix(W):
     return adjacency_matrix
 
 # Calculate and show the sum of all the adjacency matrices
-def adjacency_matrices_sum(adj_matrices, classes):
+def adjacency_matrices_sum(adj_matrices, classes, figsize = (12,7), annot = True):
     summed_matrix = np.zeros((adj_matrices.shape[1], adj_matrices.shape[2]), dtype = int)
 
     # Sum all the adjacency matrices
@@ -42,14 +42,14 @@ def adjacency_matrices_sum(adj_matrices, classes):
         summed_matrix += adj_matrices[i]
 
     df_sum, figure_sum = df_plot_heatmap(summed_matrix, classes,'Sum of all the adjacency matrices', "Purples", 'd', 
-                                        "", "", vmin = 0, vmax =adj_matrices.shape[0]  )
+                                        "", "", vmin = 0, vmax =adj_matrices.shape[0] , figsize= figsize, annot= annot )
     
     # Create the correspondent percentages matrix
     percent_matrix = summed_matrix.astype(float)
     percent_matrix = percent_matrix/(adj_matrices.shape[0])*100
 
     df_sum_per, figure_per = df_plot_heatmap(percent_matrix, classes, 'Percentage of connections between classes', "Purples", '.1f',
-                                             "", "", vmin=0, vmax = 100)
+                                             "", "", vmin=0, vmax = 100, figsize= figsize, annot= annot)
     
     return df_sum, df_sum_per, figure_sum, figure_per
 
