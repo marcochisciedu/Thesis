@@ -3,9 +3,7 @@ import wandb
 import argparse, yaml
 from dotenv import load_dotenv
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
-import pandas as pd
 
 from dataset import *
 from models import *
@@ -85,8 +83,6 @@ def main():
     wandb.login(key= WANDB_API_KEY, verify=True)
 
     device = torch.device("cuda:0")
-    # Get env variables
-    load_dotenv()
 
     wandb_run=wandb.init(
         project=WANDB_PROJECT,

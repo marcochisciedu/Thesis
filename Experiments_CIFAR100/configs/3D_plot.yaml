@@ -18,7 +18,7 @@ backbone: 'resnet18'
 
 # Dataset parameters
 num_classes : 100
-subset_list : [0,50,1]    #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
+subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
 
 # If the classifier is a dSimplex
 dSimplex : False
