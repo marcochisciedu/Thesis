@@ -93,6 +93,8 @@ def define_hyp(loaded_params):
         hyp['fd']['kl_temperature'] = loaded_params['kl_temperature']
         hyp['fd']['lambda'] = loaded_params['lambda']
     hyp['seed'] = loaded_params['seed']
+    hyp['dSimplex'] = loaded_params['dSimplex']
+
 
 # Function that executes one epoch of training the model
 def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_model = None):

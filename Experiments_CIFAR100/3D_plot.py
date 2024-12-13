@@ -42,7 +42,9 @@ def define_hyp(loaded_params):
     if subset_list is not None:
         hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
     hyp['opt']['batch_size'] = loaded_params['batch_size']
-   
+    
+    hyp['dSimplex'] = loaded_params['dSimplex']
+
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr']: 
         hyp['old_model_name'] = loaded_params['old_model_name']

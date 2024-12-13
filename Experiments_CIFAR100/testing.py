@@ -47,11 +47,12 @@ def define_hyp(loaded_params):
         hyp['old_model_name'] = loaded_params['old_model_name']
         old_subset_list = loaded_params['old_subset_list']
         hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
-    
+    hyp['dSimplex'] = loaded_params['dSimplex']
+
 
 # Function that tests the final model, returns top1 and top5 accuracy
 @torch.no_grad()
-def test_model(model, dataloader, wandb_run):
+def test_model(model, dataloader, wandb_run, step = 0, wandb_log_name = ""):
 
     model.eval()
 
@@ -80,8 +81,8 @@ def test_model(model, dataloader, wandb_run):
                                                            correct_5.float() / len(dataloader.dataset)))
 
     # Wandb log
-    wandb_run.log({'Top 1 accuracy': correct_1.float() / len(dataloader.dataset),
-                   'Top 5 accuracy': correct_5.float() / len(dataloader.dataset)}, step= 0)
+    wandb_run.log({'Top 1 accuracy'+wandb_log_name: correct_1.float() / len(dataloader.dataset),
+                   'Top 5 accuracy'+wandb_log_name: correct_5.float() / len(dataloader.dataset)}, step= step)
 
     return correct_1.float() / len(dataloader.dataset), correct_5.float() / len(dataloader.dataset)
 
