@@ -20,15 +20,15 @@ torch.backends.cudnn.benchmark = True
 hyp = {
     'opt': {
         'train_epochs': 200,
-        'batch_size': 128,
-        'lr': 0.1,                      
-        'milestones': [60, 120, 160],   # learning rate scheduler's milestones
+        'batch_size': 256,
+        'lr': 0.1,     
+        'milestones': [60, 120, 160],   # learning rate scheduler's milestones                 
         'momentum': 0.9,
         'weight_decay': 5e-4,           
     },
     'net': {
         'backbone': 'resnet18',         # resnet 18/34/50/101/152
-        'feat_dim' : 3,                 # features' dimension
+        'feat_dim' : 512,               # features' dimension
         'pretrained' : False,           # if the trained model is fine tuned from a pretrained model
     },
     'data': {
@@ -40,6 +40,7 @@ hyp = {
     'seed' : 111,                   # for reproducibility
     'num_models' : 1,               # number of models to train
     'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
+    'nfr_eval' : 20,                # after how many epochs to evaluate the NFR
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
     'loss' : 'default' ,            # training loss used
     'fd' :{                         # focal distillation parameters
@@ -50,15 +51,6 @@ hyp = {
         'kl_temperature' : 100,
         'lambda' : 1,
     },
-    'li':{                         # Logit Inhibition (ELODI) parameters
-        'ensemble_model' : None,
-        'num_models': 5,
-        'li_p': 2,
-        'li_compute_topk': -1,
-        'li_use_p_norm': False,
-        'lambda' :1,
-        'reduction' : 'mean',
-    }
 }
 # Transfer each loaded parameter to the correct hyp parameter
 def define_hyp(loaded_params):
@@ -80,6 +72,8 @@ def define_hyp(loaded_params):
    
     hyp['loss']= loaded_params['loss']
     hyp['nfr'] = loaded_params['nfr']
+    if hyp['nfr']:
+        hyp['nfr_eval'] = loaded_params['nfr_eval']
     if hyp['nfr'] or hyp['loss'] != 'default': 
         hyp['old_model_name'] = loaded_params['old_model_name']
         old_subset_list = loaded_params['old_subset_list']
@@ -101,6 +95,7 @@ def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_mod
 
     model.train()
     losses = []
+
     for (images, labels) in dataloader:
 
         labels = labels.cuda()
@@ -200,7 +195,7 @@ def main():
             config=hyp)
         # Get old model if needed to calculate NFR or a loss
         if hyp['nfr'] or hyp['loss'] != 'default':
-            old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
+            old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
                                      device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
             # Get the correct dataset to test the NFR
             print(f'Creating and loading Negative Flip Rate dataset')
@@ -228,7 +223,8 @@ def main():
             train_scheduler.step()
             val_acc = eval_training(model, epoch, cifar100_test_loader, cross_entropy_loss, wandb_run)
 
-            if hyp['nfr']:  # Calculate NFR after each epoch
+            # Calculate NFR after nfr_eval epochs or if it is the last epoch
+            if hyp['nfr'] and (epoch % hyp['nfr_eval'] == 0 or epoch == hyp['opt']['train_epochs']):  
                 nfr, _, _ = negative_flip_rate(old_model, model, cifar100_nfr_test_loader, dict_output= True)
                 impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_nfr_test_loader, dict_output=True)
                 print(f"Negative flip rate at epoch {epoch}: {nfr}")

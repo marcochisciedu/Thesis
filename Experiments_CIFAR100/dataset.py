@@ -29,7 +29,7 @@ class CIFAR100Subset(tv.datasets.CIFAR100):
 
 # Creates and returns train and validation dataloaders
 def create_dataloaders(dataset, path, batch_size, input_size=32, subset_list = None,
-                 num_workers = 0):
+                 num_workers = 4):
     if dataset == "cifar10":
         transform = tv.transforms.Compose([tv.transforms.Resize((input_size, input_size)),
                                     tv.transforms.ToTensor(),
@@ -51,9 +51,9 @@ def create_dataloaders(dataset, path, batch_size, input_size=32, subset_list = N
                                 )    
     elif dataset == "cifar100":
         train_transform = tv.transforms.Compose(
-                        [tv.transforms.Resize((input_size, input_size)),
-                        tv.transforms.RandomCrop(input_size, padding=4),
+                        [tv.transforms.RandomCrop(input_size, padding=4),
                         tv.transforms.RandomHorizontalFlip(),
+                        tv.transforms.RandomRotation(15),
                         tv.transforms.ToTensor(),
                         tv.transforms.Normalize((0.5071, 0.4867, 0.4408),
                                             (0.2675, 0.2565, 0.2761))

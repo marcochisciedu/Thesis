@@ -1,8 +1,8 @@
-wandb_name: "Training FD KL lambda 1 full CIFAR100"
+wandb_name: "Re-Training FD KL lambda 1 full CIFAR100"
 
 # Training hyperparameters
 train_epochs : 200
-batch_size : 128
+batch_size : 256
 lr :  0.1
 milestones : [60, 120, 160]
 momentum : 0.9
@@ -18,14 +18,15 @@ num_classes : 100
 subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), null = all classes
 
 # Number of models that are going to be trained
-num_models : 4
+num_models : 5
 
 # Seed for reproducibility
-seed : 112
+seed : 111
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model_name : /Training_CIFAR100_first_50_classes:v0
+nfr_eval: 20    # after how many epochs to evaluate the NRF
+old_model_name : /Re-Training_CIFAR100_first_50_classes_numclasses_50:v0
 old_subset_list: [0,50,1]
 
 loss: 'Focal Distillation'

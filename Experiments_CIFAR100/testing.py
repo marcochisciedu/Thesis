@@ -122,8 +122,8 @@ def main():
     if hyp['nfr']:
         old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
-        # Get the correct dataset to test the NFR
-        _, cifar100_nfr_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
+        # Dataset used to train the old model
+        _, cifar100_old_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
     else:
         old_model = None
 
@@ -139,11 +139,16 @@ def main():
 
     # Calculate NFR       
     if hyp['nfr']:  
-        nfr, _, _ = negative_flip_rate(old_model, model, cifar100_nfr_test_loader, dict_output= True)
-        impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_nfr_test_loader, dict_output=True)
+        nfr, _, _ = negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output= True)
+        impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output=True)
         print(f"Negative flip rate : {nfr}")
         print(f"Improved negative flip rate: {impr_nfr}")
         wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr}, step= 0)
+
+        # Test both models using only the classes used to train the old model
+        test_model(model, cifar100_old_test_loader, wandb_run, wandb_log_name= "New model old test set")
+        test_model(old_model, cifar100_old_test_loader, wandb_run, wandb_log_name= "Old model old test set")
+
 
 if __name__ == '__main__':
     main()
