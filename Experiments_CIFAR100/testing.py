@@ -1,6 +1,7 @@
 import os
 import sys
 import wandb
+import numpy as np
 import argparse, yaml
 from dotenv import load_dotenv
 
@@ -27,6 +28,7 @@ hyp = {
         'subset_list': None,        #es: list [0,50,1] corresponds to list(range(0,50,1))
         'old_subset_list': None,    # subset list of the old model, to create the correct dataloader to calculate NFR
     },
+    'num_models' : 1,
     'dSimplex': False,              # if the classifier is a dSimplex
     'nfr' : False,                  # if, at the end of each epoch, the NFR will be calculated
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
@@ -41,6 +43,7 @@ def define_hyp(loaded_params):
         hyp['data']['subset_list']  = list(range(subset_list[0], subset_list[1], subset_list[2]))
 
     hyp['opt']['batch_size'] = loaded_params['batch_size']
+    hyp['num_models'] = loaded_params['num_models']
    
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr']: 
@@ -112,43 +115,75 @@ def main():
 
     device = torch.device("cuda:0")
 
-    print("Testing "+ model_name)
+    print("Testing "+ model_name.split(":v")[0])
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Testing "+ model_name,
+        name = "Testing "+ model_name.split(":v")[0],
         config=hyp)
     
     # Get old model if needed to calculate NFR 
     if hyp['nfr']:
-        old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
+        old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
         # Dataset used to train the old model
         _, cifar100_old_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
     else:
         old_model = None
 
-    # Load model
-    model = create_model( hyp['net']['backbone'],False, hyp['net']['feat_dim'],hyp['data']['num_classes'], device,
-                         WANDB_PROJECT+model_name, wandb_run )
-
     # Create the dataloaders
     _, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH, hyp['opt']['batch_size'], 
                                                                 subset_list= hyp['data']['subset_list'])
-    # Test the loaded model
-    test_model(model, cifar100_test_loader , wandb_run)
+    # If more than one model collect all the accuracies and NFR to calculate the mean value
+    if hyp['num_models'] > 1:
+        new_model_full_top1,new_model_full_top5 = [], []
+        if hyp['nfr']: 
+            new_model_old_top1, new_model_old_top5,  old_model_top1, old_model_top5 = [], [], [], []
+            nfrs, impr_nfrs = [], []
 
-    # Calculate NFR       
-    if hyp['nfr']:  
-        nfr, _, _ = negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output= True)
-        impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output=True)
-        print(f"Negative flip rate : {nfr}")
-        print(f"Improved negative flip rate: {impr_nfr}")
-        wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr}, step= 0)
+    for i in range(hyp['num_models']):
+        if hyp['num_models'] > 1:
+            current_model_name = model_name.split(":v")[0]+":v"+str(i+int(model_name.split(":v")[1]))
+        else:
+            current_model_name = model_name
 
-        # Test both models using only the classes used to train the old model
-        test_model(model, cifar100_old_test_loader, wandb_run, wandb_log_name= "New model old test set")
-        test_model(old_model, cifar100_old_test_loader, wandb_run, wandb_log_name= "Old model old test set")
+        # Load model
+        model = create_model( hyp['net']['backbone'],False, hyp['net']['feat_dim'],hyp['data']['num_classes'], device,
+                            WANDB_PROJECT+current_model_name, wandb_run )
 
+        # Test the loaded model
+        new_top1, new_top5 =test_model(model, cifar100_test_loader , wandb_run, step= i)
+
+        # Calculate NFR       
+        if hyp['nfr']:  
+            nfr, _, _ = negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output= True)
+            impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output=True)
+            print(f"Negative flip rate : {nfr}")
+            print(f"Improved negative flip rate: {impr_nfr}")
+            wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr}, step= i)
+
+            # Test both models using only the classes used to train the old model
+            new_old_top1, new_old_top5 = test_model(model, cifar100_old_test_loader, wandb_run,  step= i, wandb_log_name= " New model old test set")
+            old_top1, old_top5 = test_model(old_model, cifar100_old_test_loader, wandb_run,  step= i, wandb_log_name= " Old model old test set")
+
+        if hyp['num_models'] > 1:
+            new_model_full_top1.append(new_top1.detach().cpu().numpy())
+            new_model_full_top5.append(new_top5.detach().cpu().numpy())
+            if hyp['nfr']: 
+                new_model_old_top1.append(new_old_top1.detach().cpu().numpy())
+                new_model_old_top5.append(new_old_top5.detach().cpu().numpy())
+                old_model_top1.append(old_top1.detach().cpu().numpy())
+                old_model_top5.append(old_top5.detach().cpu().numpy()) 
+                nfrs.append(nfr)
+                impr_nfrs.append(impr_nfr)
+
+    if hyp['num_models'] > 1:
+        wandb.log({'Mean new model top1 accuracy':np.mean(new_model_full_top1), 'Mean new model top5 accuracy': np.mean(new_model_full_top5)})
+        if hyp['nfr']: 
+            wandb.log({'Mean new model old test set top1 accuracy':np.mean(new_model_old_top1), 'Mean new model old test set top5 accuracy': np.mean(new_model_old_top5),
+                       'Mean old model top1 accuracy':np.mean(old_model_top1), 'Mean old model top5 accuracy': np.mean(old_model_top5)})
+            wandb.log({'Mean NFR':np.mean(nfrs), 'Mean Improved NFR': np.mean(impr_nfrs)})
+
+    wandb.finish()
 
 if __name__ == '__main__':
     main()
