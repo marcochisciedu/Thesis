@@ -54,7 +54,6 @@ class FocalDistillationLoss(nn.Module):
         old_cls_num = old_model_prediction.size(1)
         new_cls_num = new_model_prediction.size(1)
         if old_cls_num != new_cls_num:
-            #TODO: may generate empty tensor, need to be fixed
             mask = gt < min(new_cls_num, old_cls_num) # mask samples belong to new classes
             gt = gt[mask]
             new_model_prediction = new_model_prediction[mask, :min(new_cls_num, old_cls_num)] # align output dim

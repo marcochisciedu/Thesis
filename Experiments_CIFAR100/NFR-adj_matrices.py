@@ -95,8 +95,8 @@ def main():
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
 
     adj_matrices = []
-    flip_matrices, flip_per_mat, nfr_adj_matrices  = [], [], []
-    impr_flip_matrices, impr_flip_per_mat, impr_nfr_adj_matrices  = [], [], []
+    flip_matrices, nfr_adj_matrices  = [], [], []
+    impr_flip_matrices, impr_nfr_adj_matrices  = [], [], []
 
     for i in range(hyp['num_models']):
         if hyp['num_models'] > 1:

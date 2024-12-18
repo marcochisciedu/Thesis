@@ -7,8 +7,6 @@ import sys
 import wandb
 import argparse, yaml
 from math import ceil
-import numpy as np
-import copy
 from dotenv import load_dotenv
 
 import torch
@@ -79,15 +77,6 @@ hyp = {
         'kl_temperature' : 100,
         'lambda' : 1,
     },
-    'li':{                         # Logit Inhibition (ELODI) parameters
-        'ensemble_model' : None,
-        'num_models': 5,
-        'li_p': 2,
-        'li_compute_topk': -1,
-        'li_use_p_norm': False,
-        'lambda' :1,
-        'reduction' : 'mean',
-    }
 }
 
 #############################################
@@ -370,15 +359,6 @@ def evaluate(model, loader, tta_level=0):
     return (logits.argmax(1) == loader.labels).float().mean().item()
 
 ############################################
-#          Cosine similarity loss          #
-############################################
-def create_prob_simplex_vertex(num_classes):
-    vertex_prob = np.eye(num_classes)
-    center_vertex = np.mean(vertex_prob, axis=0)
-    prototypes_prob = vertex_prob - center_vertex
-    return prototypes_prob
-
-############################################
 #            Easier model loading          #
 ############################################
 def load_trained_model(model_path, wandb_run, feat_dim):
@@ -436,14 +416,6 @@ def main(model_name, run):
     current_steps = 0
     if hyp['nfr']:
         old_model = load_trained_model(hyp['old_model_name'], wandb_run, hyp['net']['feat_dim'])
-    if hyp['loss'] == 'Logit Inhibition':
-        model_paths = [hyp['li']['ensemble_model'][:-1]+str(i+int(hyp['li']['ensemble_model'][-1])) for i in range(hyp['li']['num_models']) ]
-
-        # Load all trained models
-        trained_models = [load_trained_model(path, wandb_run, hyp['net']['feat_dim']) for path in model_paths]
-
-        # Create the ensemble model
-        ensemble = ModelEnsemble(trained_models)
 
     norm_biases = [p for k, p in model.named_parameters() if 'norm' in k and p.requires_grad]
     other_params = [p for k, p in model.named_parameters() if 'norm' not in k and p.requires_grad]
@@ -492,19 +464,7 @@ def main(model_name, run):
         for inputs, labels in train_loader:
 
             outputs = model(inputs)
-            if hyp['loss'] == 'cosine_similarity':
-                # Create the simplex and get target_cos
-                simplex = create_prob_simplex_vertex(10)
-                target_cos = torch.tensor(simplex[labels.cpu().numpy()], dtype=torch.float32)
-                # Target tensor for CosineEmbeddingLoss
-                cosine_targets = torch.ones(batch_size)  # All 1s since we want to maximize similarity
-
-                # Loss function
-                criterion = nn.CosineEmbeddingLoss(margin=0.0)
-                loss_cosine = criterion(outputs, target_cos.cuda(), cosine_targets.cuda())
-                loss_CE = loss_fn(outputs, labels).sum()
-                loss = loss_CE + loss_cosine
-            elif hyp['loss'] == 'Focal Distillation':
+            if hyp['loss'] == 'Focal Distillation':
                 # Get old model's prediction
                 old_outputs = old_model(inputs)
                 fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
@@ -512,21 +472,6 @@ def main(model_name, run):
                 loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
                 loss_CE = loss_fn(outputs, labels).sum()
                 loss = loss_CE + hyp['fd']['lambda']*loss_focal_distillation
-            elif hyp['loss'] == 'Logit Inhibition':
-                # Get old model's prediction
-                old_outputs = old_model(inputs)
-
-                # Get models ensemble's prediction
-                ensemble_output = ensemble(inputs)
-
-                li_loss = LogitsInhibitionLoss(hyp['li']['li_p'],hyp['li']['li_compute_topk'],
-                                                hyp['li']['li_use_p_norm'], hyp['li']['reduction'])
-                ensemble_li_loss = li_loss(outputs, ensemble_output)
-                print(f'ensemble li loss: {ensemble_li_loss}')
-                old_model_li_loss = li_loss(outputs, old_outputs)
-                lam = hyp['li']['lambda'] 
-                print(f'lambda: {lam}')
-                loss = hyp['li']['lambda']*ensemble_li_loss+ (1- hyp['li']['lambda'])* old_model_li_loss
             else:
                 loss = loss_fn(outputs, labels).sum()
             optimizer.zero_grad(set_to_none=True)
@@ -641,14 +586,6 @@ if __name__ == "__main__":
         hyp['fd']['distillation_type'] = loaded_params['distillation_type']
         hyp['fd']['kl_temperature'] = loaded_params['kl_temperature']
         hyp['fd']['lambda'] = loaded_params['lambda']
-    if hyp['loss'] == 'Logit Inhibition':
-        hyp['li']['ensemble_model'] =loaded_params['ensemble_model']
-        hyp['li']['num_models'] =loaded_params['num_models']
-        hyp['li']['li_p'] =loaded_params['li_p']
-        hyp['li']['li_compute_topk'] =loaded_params['li_compute_topk']
-        hyp['li']['li_use_p_norm'] =loaded_params['li_use_p_norm']
-        hyp['li']['lambda'] = loaded_params['lambda']
-        hyp['li']['reduction'] = loaded_params['reduction']
 
     # How many times the main is runned
     accs = torch.tensor([main(model_name, run) for run in range(num_models)])
