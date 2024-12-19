@@ -93,7 +93,7 @@ def main():
     _, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
 
     # Get old model
-    old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
+    old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
 
     mean_mutual_knn_alignments, all_mutual_knn_alignments = [], []
@@ -136,6 +136,6 @@ def main():
                         "New models", "Mean mutual knn alignment", (0, 1))
     wandb.log({'Mean features mutual knn alignment, k: '+ str(hyp['k']): wandb.Image(fig_feat)})
 
-
+    wandb_run.finish()
 if __name__ == '__main__':
     main()

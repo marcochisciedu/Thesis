@@ -1,18 +1,19 @@
 # Name of the wandb run
-run_name: "Comparing models features CIFAR100 k 20 batch size 128"
+run_name: "Re Comparing models features CIFAR100 k 10 batch size 256"
 
 # List of the each first new model's name. 
 #New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
-model_names: [/Training_full_CIFAR100:v0, 
-/Training_FD_L2_lambda_1_full_CIFAR100:v0,
-/Training_FD_KL_lambda_1_full_CIFAR100:v0]
+model_names: [/Re-Training_full_CIFAR100:v0, 
+/Re-Training_FD_KL_lambda_1_full_CIFAR100:v0,
+/Re-Training_FD_KL_lambda_1_full_CIFAR100_neg-flip:v0,
+/Re-Training_FD_L2_lambda_0.6_full_CIFAR100_neg-flip:v0]
 
 # Labels used in the graph for each group of models
-labels : ['Regular Training', 'Focal Distillation L2', 'Focal Distillation KL']
+labels : ['Regular Training', 'Foc Dist KL', 'FD Kl neg-flip', 'FD L2 neg-flip']
 # Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
-colors : ['limegreen', 'firebrick', 'royalblue']
+colors : ['limegreen',  'royalblue', 'cornflowerblue', 'firebrick']
 # Testing dataloader's batch size
-batch_size : 128
+batch_size : 256
 
 # ResNet parameters
 backbone: 'resnet18'
@@ -26,11 +27,11 @@ subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), Non
 num_models: 5
 
 # Name of the old model and subset of classes it was trained on
-old_model_name : /Training_CIFAR100_first_50_classes:v0
+old_model_name : /Re-Training_CIFAR100_first_50_classes_numclasses_50:v0
 old_subset_list: [0,50,1]
 
 # Used k
-k: 20
+k: 10
 
 # If the classifier is a dSimplex
 dSimplex : False

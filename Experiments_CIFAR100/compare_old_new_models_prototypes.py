@@ -112,7 +112,7 @@ def main():
             W_array.append(W)
     
     # Get old model's prototypes
-    old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
+    old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'],  len( hyp['data']['old_subset_list']), 
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
     W_old = old_model.fc2.weight.detach().cpu().numpy().astype(np.float32)
 
@@ -140,8 +140,9 @@ def main():
 
     # Calculate and plot the cosine distances between the old model's prototypes
     old_distances = vectors_distances(W_old)
-    df_old_distances , fig_old_distances = df_plot_heatmap(old_distances, classes, "Distances between old model class prototypes", 'Purples', '.1f',
-                                                           "", "", center =1, vmin= 0, vmax = 2, figsize=( 20, 14), annot = False)
+    df_old_distances , fig_old_distances = df_plot_heatmap(old_distances, classes[hyp['data']['old_subset_list'][0]: hyp['data']['old_subset_list'][-1]+1],
+                                                            "Distances between old model class prototypes", 
+                                                           'Purples', '.1f', "", "", center =1, vmin= 0, vmax = 2, figsize=( 20, 14), annot = False)
     print_and_log(df_old_distances, fig_old_distances,"Distances between old model class prototypes" )
 
     # Collect, for each model, the distance between the prototypes and the origin point
@@ -149,7 +150,7 @@ def main():
     mean_origin_distances.append( origin_distances(W_old))
     # Collect the mean distance between the distances of the old model's prototypes and the new models' prototypes, considering all classes
     # or only the ones that correspond to old model's classes, if they are a subset of the new model's classes
-    mean_compare_distances, std_compare_distances, mean_compare_distances_only_indices, std_compare_distances_only_indices = [], [], [], []
+    mean_compare_distances, std_compare_distances = [], []
     for name_index in range(len(model_names)):                      # iterate through groups of new models
         distances = []
         origin_distance =[]
@@ -166,28 +167,20 @@ def main():
         print_and_log(df_mean_distance, fig_mean_distance,"Mean distances between class prototypes in " +  model_names[name_index].split(":v")[0] )
 
         # Compare old-new models's prototype distances
-        compare_old_new_distances = np.absolute(old_distances-mean_distance)
-        df_compare, fig_compare =  df_plot_heatmap(compare_old_new_distances, classes, 
+        compare_old_new_distances = np.absolute(old_distances-mean_distance[hyp['data']['old_subset_list'][0]: hyp['data']['old_subset_list'][-1]+1,
+                                                                             hyp['data']['old_subset_list'][0]: hyp['data']['old_subset_list'][-1]+1])
+        df_compare, fig_compare =  df_plot_heatmap(compare_old_new_distances, classes[hyp['data']['old_subset_list'][0]: hyp['data']['old_subset_list'][-1]+1], 
                                                                "Absolute distance between old model and " +  model_names[name_index].split(":v")[0]+ " prototype distances",
                                                                'Reds', '.1f',  "", "", center=1, vmin= 0, vmax = 2, figsize=( 20, 14), annot = False)
         print_and_log(df_compare, fig_compare,"Absolute distance between old model and " +  model_names[name_index].split(":v")[0]+ " prototype distances" )
         # Save the mean and std of the compared distances for each group of models
         mean_compare_distances.append( np.mean(compare_old_new_distances))
         std_compare_distances.append(np.std(compare_old_new_distances))
-        # If the old model was trained on less classes than the new model, select a subset of the compared distances bewtween prototypes
-        if len(hyp['data']['old_subset_list'] ) < len(classes):
-            compare_old_new_distances_only_indices = compare_old_new_distances[hyp['data']['old_subset_list'] ][:, hyp['data']['old_subset_list']]
-            mean_compare_distances_only_indices.append(np.mean(compare_old_new_distances_only_indices))
-            std_compare_distances_only_indices.append(np.std(compare_old_new_distances_only_indices))
     # Create and log the bar plot for the mean compared distances        
     fig_mean_comp_distances = bar_plot(mean_compare_distances, labels, colors, "Mean of the distances between old and new models prototypes", "New models", 
                                        "Mean distance", (0,2), yerr= std_compare_distances)
     wandb.log({'Mean of the distances between old and new models prototypes': wandb.Image(fig_mean_comp_distances)})
 
-    if len(hyp['data']['old_subset_list'] ) < len(classes):
-        fig_mean_comp_distances_only_indices = bar_plot(mean_compare_distances_only_indices, labels, colors, "Mean of the distances between old-new models prototypes, old indices", "New models", 
-                                        "Mean distance", (0,2), yerr= std_compare_distances_only_indices)
-        wandb.log({'Mean of the distances between old-new models prototypes, old model indices': wandb.Image(fig_mean_comp_distances_only_indices)})
     
     # Heatmap containg the mean prototype-origin point of each group of models
     df_origin, fig_origin = df_plot_heatmap(mean_origin_distances, classes, "Origin distances", "Blues", '.1f', "Classes", "Models", 
