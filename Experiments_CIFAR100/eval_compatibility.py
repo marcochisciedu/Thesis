@@ -30,6 +30,7 @@ hyp = {
     'gallery_model_name' : None,       # the name of the model that extracts feature from the gallery set
     'query_model_name' : None,        # the name of the model that extracts feature from the query set
     'num_models' : 1,                 # number of query models to evaluate
+    'output_type': 'features',        # type of output to compare, features logits or softmax
 }
 # Transfer each loaded parameter to the correct hyp parameter
 def define_hyp(loaded_params):
@@ -43,6 +44,7 @@ def define_hyp(loaded_params):
 
     hyp['opt']['batch_size'] = loaded_params['batch_size']
     hyp['num_models'] = loaded_params['num_models']
+    hyp['output_type'] = loaded_params['output_type']
    
     hyp['gallery_model_name'] = loaded_params['gallery_model_name']
     hyp['query_model_name'] = loaded_params['query_model_name']
@@ -75,7 +77,7 @@ def main():
     print("Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
+        name = "Softmax Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
         config=hyp)
 
     # Get the whole CIFAR100 dataset
@@ -96,7 +98,8 @@ def main():
         query_model = create_model( hyp['net']['backbone'],False, hyp['net']['feat_dim'],hyp['data']['num_classes_query_model'], device,
                                 WANDB_PROJECT+current_query_model_name, wandb_run )
 
-        cmc_out, mean_ap_out = cmc_evaluate(gallery_model, query_model, val_loader, device, distance_metric='cosine', compute_map= True)
+        cmc_out, mean_ap_out = cmc_evaluate(gallery_model, query_model, val_loader, device, distance_metric='cosine',
+                                             output_type=hyp['output_type'] ,compute_map= True)
 
         print('CMC Top-1 = {}, CMC Top-5 = {}'.format(*cmc_out))
         print('mAP = {}'.format(mean_ap_out))

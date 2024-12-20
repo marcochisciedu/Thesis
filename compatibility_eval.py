@@ -198,6 +198,7 @@ def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
         val_loader: torch.utils.data.DataLoader,
         device: torch.device,
         distance_metric: str,
+        output_type : str ='features',
         verbose: bool = True,
         per_class: bool = False,
         compute_map: bool = False,
@@ -235,8 +236,20 @@ def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
             data = data.to(device)
             label = label.to(device)
             
-            gallery_feature = gallery_model(data)['features']
-            query_feature = query_model(data)['features']
+            if output_type == 'logits':
+                gallery_feature = gallery_model(data)['logits']
+                query_feature = query_model(data)['logits']
+                gallery_feature = F.pad(gallery_feature, (0,query_feature.shape[1]-gallery_feature.shape[1]))
+            #apply softmax to the query and gallery features
+            if output_type == 'softmax':
+                gallery_feature = gallery_model(data)['logits']
+                query_feature = query_model(data)['logits']
+                gallery_feature = F.softmax(gallery_feature, dim=1)
+                gallery_feature = F.pad(gallery_feature, (0,query_feature.shape[1]-gallery_feature.shape[1]))
+                query_feature = F.softmax(query_feature, dim=1)
+            if output_type == 'features':
+                gallery_feature = gallery_model(data)['features']
+                query_feature = query_model(data)['features']
 
             gallery_features.append(gallery_feature.squeeze().cpu())
             query_features.append(query_feature.squeeze().cpu())
@@ -246,6 +259,9 @@ def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
     gallery_features = torch.cat(gallery_features)
     query_features = torch.cat(query_features)
     labels = torch.cat(labels)
+    print(gallery_features.shape)
+    print(query_features.shape)
+    print(labels.shape)
 
     # Distance matrix that contains distances between each possible query-gallery feature couple
     print("=> Computing Distance Matrix")
