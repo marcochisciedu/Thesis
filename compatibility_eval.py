@@ -192,6 +192,12 @@ def l2_distance_matrix(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     return torch.cdist(x, y, p=2)
 
+def create_prob_simplex_vertex(num_classes):
+    vertex_prob = np.eye(num_classes)
+    center_vertex = np.mean(vertex_prob, axis = 0)
+    prototypes_prob = vertex_prob - center_vertex
+
+    return prototypes_prob
 
 def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
         query_model: Union[nn.Module, torch.jit.ScriptModule],
@@ -239,13 +245,11 @@ def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
             if output_type == 'logits':
                 gallery_feature = gallery_model(data)['logits']
                 query_feature = query_model(data)['logits']
-                gallery_feature = F.pad(gallery_feature, (0,query_feature.shape[1]-gallery_feature.shape[1]))
             #apply softmax to the query and gallery features
             if output_type == 'softmax':
                 gallery_feature = gallery_model(data)['logits']
                 query_feature = query_model(data)['logits']
                 gallery_feature = F.softmax(gallery_feature, dim=1)
-                gallery_feature = F.pad(gallery_feature, (0,query_feature.shape[1]-gallery_feature.shape[1]))
                 query_feature = F.softmax(query_feature, dim=1)
             if output_type == 'features':
                 gallery_feature = gallery_model(data)['features']
@@ -262,6 +266,11 @@ def cmc_evaluate(gallery_model: Union[nn.Module, torch.jit.ScriptModule],
     print(gallery_features.shape)
     print(query_features.shape)
     print(labels.shape)
+
+    if output_type == 'softmax' or output_type == 'logits':
+        simplex_p = torch.tensor(create_prob_simplex_vertex(gallery_features.shape[1])).float()
+        gallery_features = gallery_features @ simplex_p.T
+        query_features = query_features[:, :gallery_features.shape[1]] @ simplex_p.T
 
     # Distance matrix that contains distances between each possible query-gallery feature couple
     print("=> Computing Distance Matrix")
