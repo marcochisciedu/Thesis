@@ -20,6 +20,10 @@ hyp = {
     },
     'num_models': 100,
 }
+"""
+Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) using the prototype of multiple models trained under the
+same hyperpameters (different seeds)
+"""
 
 def main():
 
@@ -77,12 +81,12 @@ def main():
         W = model[8].weight.detach().cpu().numpy().astype(np.float32)
         W_array.append(W)
 
-        # Calculate the adjacency matrix of the features
+        # Calculate the adjacency matrix of the prototypes
         adjacency_matrix=calculate_adjacency_matrix(W)
         adj_matrices.append(adjacency_matrix)
         
     
-    # Calculate mutual knn alignment between features
+    # Calculate mutual knn alignment between prototypes
     W_array = np.array(W_array)
     for k in [2,3,4,5]:
         knn_alignment= mutual_knn_alignment_prototypes(W_array, k)

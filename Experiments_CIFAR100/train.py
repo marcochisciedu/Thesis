@@ -17,6 +17,10 @@ from NFR_losses import *
 from fixed_classifiers import *
 torch.backends.cudnn.benchmark = True
 
+"""
+Code used to train Incremental ResNets on CIFAR100.
+The new models can be trained with different losses: cross entropy and focal distillation.
+"""
 hyp = {
     'opt': {
         'train_epochs': 200,

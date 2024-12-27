@@ -52,6 +52,9 @@ def define_hyp(loaded_params):
 
     hyp['dSimplex'] = loaded_params['dSimplex']
 
+"""
+Code to search for the possible correlation between negative flip and the prototypes' adjacency matrix 
+"""
 def main():
 
     # Get env variables

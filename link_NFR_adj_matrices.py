@@ -2,6 +2,10 @@ from print_and_logging import *
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
+"""
+Code to link the negative flips with the adjacency matrices
+"""
+
 # Calculate a negative flips heatmap showing how many times the old model's predictions (y axes) 
 # got wrongly predicted as another class by the new model (x axes)
 def flips_heatmap(flips, num_flips, classes, display= True, figsize = (12,7), annot = True):

@@ -1,44 +1,12 @@
 import torch
 import torch.nn as nn 
 
-from utils import l2_norm
 from models.resnet import *
 
-# Output dim of each ResNet
-__BACKBONE_OUT_DIM = {
-    'resnet18': 512,
-    'resnet34': 512,
-    'resnet50': 2048,
-    'resnet101': 2048,
-    'resnet152': 2048
-}
-
-
-def get_backbone_feat_size(backbone):
-    if backbone not in __BACKBONE_OUT_DIM:
-        raise ValueError('Backbone not supported: {}'.format(backbone))
-    return __BACKBONE_OUT_DIM[backbone]
-
-# To extract features from a net given a dataloader
-def extract_features(device, net, dataloader, return_labels=False):
-    features = None
-    labels = None
-    net.eval()
-    with torch.no_grad():
-        for inputs in dataloader:
-            images = inputs[0].cuda()
-            with torch.autocast(device_type='cuda', dtype=torch.float16):
-                f = net(images)['features']     # net forward returns a dict 
-            f = l2_norm(f)
-            if features is not None:       # after the first loop
-                features = torch.cat((features, f), 0)
-                labels = torch.cat((labels, inputs[1]), 0) if return_labels else None
-            else:                       # during the first loop
-                features = f
-                labels = inputs[1] if return_labels else None
-    if return_labels:
-        return features.detach().cpu(), labels.detach().cpu()
-    return features.detach().cpu().numpy()
+"""
+Code to create and load an Incremental ResNet. 
+A fully connected layer can be added to modify the features' dimension
+"""
 
 # Uses the ResNet backbone and adds the needed fc layers to achieve the requested feat_size and num_classes
 class Incremental_ResNet(nn.Module):

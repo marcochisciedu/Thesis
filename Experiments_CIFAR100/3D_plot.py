@@ -54,6 +54,11 @@ def define_hyp(loaded_params):
     else:
         hyp['add_convex_hull'] = loaded_params['add_convex_hull']
 
+"""
+Code that prints the given model's prototypes in 3D. Can print them showing their convex hull or with the features
+of all the images of a chosen class highlighting the negative flips.
+"""
+
 def main():
 
     # Select config 

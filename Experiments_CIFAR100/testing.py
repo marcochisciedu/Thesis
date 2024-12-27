@@ -15,6 +15,12 @@ from negative_flip import *
 from fixed_classifiers import *
 torch.backends.cudnn.benchmark = True
 
+"""
+Code used to test an Incremental ResNets trained on CIFAR100.
+The new models can be compared to an older version.
+Test time accuracy and Negative Flip Rate
+"""
+
 hyp = {
     'opt': {
         'batch_size': 128, 

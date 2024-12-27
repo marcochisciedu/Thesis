@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+"""
+Baselines losses to reduce Negative Flip Rate (NFR) while training a new model
+"""
 class FocalDistillationLoss(nn.Module):
     """
     This class implements the focal distillation loss for PC-training.

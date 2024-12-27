@@ -1,7 +1,7 @@
 # Name of the model to search unargmaxability on
 model_name: /Bottleneck3CIFAR10_100_1_1percent_9.9epochs:v1
 
-# Features' dimension, if the dSimplex is used feat_dim = num_classes -1
+# Features' dimension
 feat_dim : 9
 
 # Number of swaps to attempt before giving up

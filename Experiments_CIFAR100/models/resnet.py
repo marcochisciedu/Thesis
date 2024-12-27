@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-from collections import OrderedDict
-
 # Found in https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-f37072fd.pth',

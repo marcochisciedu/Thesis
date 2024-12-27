@@ -20,6 +20,11 @@ hyp = {
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
 }
 
+"""
+Code that prints the given model's prototypes in 3D. Can print them showing their convex hull or with the features
+of all the images of a chosen class highlighting the negative flips.
+"""
+
 def main():
 
     # Select config 
@@ -73,7 +78,7 @@ def main():
 
     # Get model last layer's weights and plot its vectors
     W = model[8].weight.detach().cpu().numpy().astype(np.float32)
-    # 3d plot
+    # 3d plot with negative flips features or prototypes' convex hull
     if hyp['nfr'] == True:
         old_model = make_net(feat_dim= 3)
         artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')

@@ -26,6 +26,11 @@ hyp = {
     'k' : [1],                          # List of k that is going to be used
 }
 
+"""
+Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) between the prototypes, instead of features, of an old and multiple new models
+and calculate the cosine distance between them.
+"""
+
 def main():
 
     # Select config 

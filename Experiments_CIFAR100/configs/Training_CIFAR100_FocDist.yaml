@@ -1,4 +1,4 @@
-wandb_name: "Re-Training FD KL lambda 1 full CIFAR100"
+wandb_name: "Re-Training FD L2 lambda 0.8 full CIFAR100 neg-flip"
 
 # Training hyperparameters
 train_epochs : 200
@@ -32,10 +32,10 @@ old_subset_list: [0,50,1]
 loss: 'Focal Distillation'
 fd_alpha : 1
 fd_beta : 5
-focus_type : 'old_correct'
-distillation_type : 'kl'
+focus_type : 'neg_flip'
+distillation_type : 'l2'
 kl_temperature : 100
-lambda : 1
+lambda : 0.8
 
 # If the classifier is a dSimplex
 dSimplex : False

@@ -1,3 +1,7 @@
+"""
+Fast and self-contained training script for CIFAR-10.
+"""
+
 #############################################
 #            Setup/Hyperparameters          #
 #############################################
@@ -361,6 +365,7 @@ def evaluate(model, loader, tta_level=0):
 ############################################
 #            Easier model loading          #
 ############################################
+
 def load_trained_model(model_path, wandb_run, feat_dim):
     """
     Load a trained model from a given path.

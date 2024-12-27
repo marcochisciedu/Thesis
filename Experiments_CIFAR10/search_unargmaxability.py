@@ -26,6 +26,10 @@ hyp = {
     }
 }
 
+"""
+Given a model find if some of its classes are unargmaxable (if a prototype is within the others' convex hull)
+"""
+
 # Check each class accuracy score
 def check_unargmaxability(model, dataloader, classes):
     model.eval()
@@ -37,7 +41,7 @@ def check_unargmaxability(model, dataloader, classes):
         for data in dataloader:
             inputs, labels = data
 
-            # Get both models outputs
+            # Get model's outputs
             logits = model(inputs)
             output = logits.argmax(1)
             outputs.extend(output.detach().cpu().numpy())
@@ -46,6 +50,7 @@ def check_unargmaxability(model, dataloader, classes):
             for c in range(len(classes)):
                 accuracy[c] += ((output == labels) * (labels == c)).float().sum().item()
                 num_examples[c] += (labels == c).sum().item()
+                
     # Print and log each class accuracy and search if each label is assigned at least once
     for i in range(len(classes)):
         accuracy[i] = accuracy[i]/num_examples[i]

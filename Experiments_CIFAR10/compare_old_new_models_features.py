@@ -23,7 +23,9 @@ hyp = {
     'old_model_classes_indices': None,  # indices of the classes shared by all the models
     'k' : 20                            # number of nearest neighbors
 }
-
+"""
+Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) between the features of an old and multiple new models
+"""
 def main():
 
     # Select config 

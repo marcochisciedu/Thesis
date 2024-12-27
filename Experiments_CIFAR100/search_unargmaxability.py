@@ -61,6 +61,9 @@ def check_unargmaxability(model, dataloader, classes):
 
     return accuracy
 
+"""
+Given a model find if some of its classes are unargmaxable (if a prototype is within the others' convex hull)
+"""
     
 def main():
 

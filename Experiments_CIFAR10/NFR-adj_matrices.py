@@ -17,10 +17,14 @@ from link_NFR_adj_matrices import *
 hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
-        'feat_dim' : 3,                 # features' dimension
+        'feat_dim' : 3,         # features' dimension
     },
-    'num_models' : 100           # number of "new" models 
+    'num_models' : 100          # number of "new" models 
 }
+
+"""
+Code to search for the possible correlation between negative flip and the prototypes' adjacency matrix 
+"""
 
 def main():
 
@@ -71,7 +75,7 @@ def main():
         model_v2 = make_net( hyp['net']['feat_dim'])
         if hyp['num_models'] > 1:
             current_model_name = new_model_name.split(":v")[0]+":v"+str(i+int(new_model_name.split(":v")[1]))
-            display_all = False
+            display_all = False  # do not display each adjacency matrix
         else:
             current_model_name = new_model_name
             display_all = True

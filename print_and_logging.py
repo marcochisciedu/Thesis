@@ -4,6 +4,10 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 
+"""
+Useful code to print and log to wandb dataframes as heatmaps or bar plots
+"""
+
 # Simple function that prints and log a dataframe and a figure given their title
 def print_and_log(df, fig, title):
     print(title+ f":\n {df}")

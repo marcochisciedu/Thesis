@@ -1,5 +1,5 @@
 # Model's name. Models have to be named as: /model_name:v_num 
-model_name: /Re-Training_full_CIFAR100:v0
+model_name: /Re-Training_FD_L2_lambda_0.6_full_CIFAR100_neg-flip:v0
 num_models : 5
 
 # Testing dataloader's batch size

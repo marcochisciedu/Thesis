@@ -1,5 +1,9 @@
 import torch
 
+"""
+Simple code that calculates negative flips
+"""
+
 # Calculates regular negative flip rate 
 def negative_flip_rate(model_v1, model_v2, test_loader, dict_output = False):
     negative_flips= 0

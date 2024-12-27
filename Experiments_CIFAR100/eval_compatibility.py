@@ -49,7 +49,9 @@ def define_hyp(loaded_params):
     hyp['gallery_model_name'] = loaded_params['gallery_model_name']
     hyp['query_model_name'] = loaded_params['query_model_name']
 
-
+"""
+Code that evaluates compatibility between an old model and multiple new ones
+"""
 def main():
      # Select config 
     parser = argparse.ArgumentParser(description='Training ResNet on CIFAR100')
@@ -74,7 +76,7 @@ def main():
 
     device = torch.device("cuda:0")
 
-    print("Logits Evaluate compatibility with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
+    print("All dataset Softmax with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
         name = "All dataset Softmax Evaluate compatibility with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],

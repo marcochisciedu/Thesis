@@ -54,7 +54,10 @@ def define_hyp(loaded_params):
     hyp['k'] = loaded_params['k']
 
     hyp['dSimplex'] = loaded_params['dSimplex']
-
+    
+"""
+Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) between the features of an old model and multiple new ones
+"""
 def main():
 
     # Select config 

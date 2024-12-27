@@ -1,9 +1,9 @@
 # Names of the gallery and query models
 gallery_model_name: /Re-Training_CIFAR100_first_50_classes_numclasses_50:v0
-query_model_name: /Re-Training_CIFAR100_first_50_classes_numclasses_50:v0
+query_model_name: /Re-Training_FD_L2_lambda_0.6_full_CIFAR100_neg-flip:v0
 
 # Number of query models to evaluate
-num_models : 1
+num_models : 5
 
  # String that defines the type of output to compare, can be: 'features' 'logits' or 'softmax'
 output_type : 'softmax'
@@ -15,7 +15,7 @@ batch_size : 256
 backbone: 'resnet18'
 feat_dim : 512
 num_classes_gallery_model : 50
-num_classes_query_model: 50
+num_classes_query_model: 100
 
 # Dataset parameters
-subset_list : [0,50,1]  #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
+subset_list : null  #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes

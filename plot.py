@@ -2,6 +2,9 @@ import numpy as np
 import plotly.graph_objs as go
 from scipy.spatial import ConvexHull
 
+"""
+Code to 3D plot a model's prototypes, either with a convex hull or adding images' features as color coded points
+"""
 
 # 3D plot with convex hull
 def vector_plot(tvects, classes, is_vect=True,orig=[0,0,0], add_convex_hull = True):

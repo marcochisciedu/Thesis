@@ -3,6 +3,9 @@ import torchvision as tv
 
 from typing import List
 
+"""
+Code that handles CIFAR100. A subset of the whole dataset can be selected.
+"""
 
 # Takes a list of indices (CIFAR100 classes) and creates a subset
 class CIFAR100Subset(tv.datasets.CIFAR100):
@@ -30,26 +33,7 @@ class CIFAR100Subset(tv.datasets.CIFAR100):
 # Creates and returns train and validation dataloaders
 def create_dataloaders(dataset, path, batch_size, input_size=32, subset_list = None,
                  num_workers = 4):
-    if dataset == "cifar10":
-        transform = tv.transforms.Compose([tv.transforms.Resize((input_size, input_size)),
-                                    tv.transforms.ToTensor(),
-                                    tv.transforms.Normalize((0.5071, 0.4867, 0.4408),
-                                                        (0.2675, 0.2565, 0.2761))
-                                    ])
-        # Can be used as a gallery set
-        valid_set = tv.datasets.CIFAR10(root=path, 
-                                    train=False, 
-                                    download=True, 
-                                    transform=transform
-                                )
-        
-        # Can be used as a query set
-        train_set = tv.datasets.CIFAR10(root=path, 
-                                train=True, 
-                                download=True, 
-                                transform=transform
-                                )    
-    elif dataset == "cifar100":
+    if dataset == "cifar100":
         train_transform = tv.transforms.Compose(
                         [tv.transforms.RandomCrop(input_size, padding=4),
                         tv.transforms.RandomHorizontalFlip(),

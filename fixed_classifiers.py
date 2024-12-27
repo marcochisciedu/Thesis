@@ -1,4 +1,7 @@
 import torch
+"""
+Code to add a fixed classifier to a net
+"""
 
 def dsimplex(num_classes=10, device='cuda'):
     def simplex_coordinates(n, device):

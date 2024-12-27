@@ -8,11 +8,13 @@ from sklearn.preprocessing import normalize
 
 from print_and_logging import df_plot_heatmap
 
+"""
+Code needed to compare two models features, prototypes or adjacency matrix.
+"""
 
 ############################################
 #                Adjacency                 #
 ############################################
-
 
 # Calculates the adjacency matrix of the prototypes
 def calculate_adjacency_matrix(W):
@@ -230,6 +232,11 @@ def plot_alignment(knn_alignment_matrix, indices, k):
 #          Negative flip features          #
 ############################################
 
+"""
+Code to extract the features from all the images of a given class and separate them after calculating the negative flips between the old and
+the new model
+"""
+
 # Get the features of a given class, separates them in correct predictions, negative flip between classes that are adjacent
 # and negative flips between non adjacent classes
 def class_negative_flip_rate_features(class_index, model_v1, model_v2, test_loader, impr= False):
@@ -296,6 +303,7 @@ def class_negative_flip_rate_features(class_index, model_v1, model_v2, test_load
 
     return all_correct_feat, all_adj_flip_feat, all_non_adj_flip_feat
 
+# Same as the previous function but using ResNets with a dictionary output
 def class_negative_flip_rate_features_ResNet(class_index, model_v1, model_v2, test_loader, impr= False):
     all_correct_feat = []
     all_adj_flip_feat= []

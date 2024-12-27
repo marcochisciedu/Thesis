@@ -1,8 +1,7 @@
 # Name of the model to 3D plot
 model_name: /Training_feat_dim_3_full_CIFAR100:v0
 
-# If the negative flip are going to be calculated and shown in the 3D plot, if false the prototypes'
-# convex hull is shown
+# If the negative flip are going to be calculated and shown in the 3D plot
 nfr: False
 old_model_name : null
 old_subset_list: null
