@@ -9,3 +9,4 @@ gurobipy
 pandas
 plotly
 seaborn
+kaleido

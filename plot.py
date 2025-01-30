@@ -17,7 +17,6 @@ def vector_plot(tvects, classes, is_vect=True,orig=[0,0,0], add_convex_hull = Tr
             coords = [[o,np.sum([o,v],axis=0)] for o,v in zip(orig,tvects)]
     else:
         coords = tvects
-
     data = []
     for i,c in enumerate(coords):
         X1, Y1, Z1 = zip(c[0])
@@ -25,10 +24,11 @@ def vector_plot(tvects, classes, is_vect=True,orig=[0,0,0], add_convex_hull = Tr
         vector = go.Scatter3d(x = [X1[0],X2[0]],
                               y = [Y1[0],Y2[0]],
                               z = [Z1[0],Z2[0]],
-                              marker = dict(size = [0,5],
+                              line=dict(width = 10),
+                              marker = dict(size = [7,7],
                                             color = ['blue'],
-                                            line=dict(width=5,
-                                                      color='DarkSlateGrey')),
+                                            line=dict(width=100,
+                                                      color='black')),
                               name = classes[i])
         data.append(vector)
     layout = go.Layout(
@@ -51,6 +51,9 @@ def vector_plot(tvects, classes, is_vect=True,orig=[0,0,0], add_convex_hull = Tr
                             alphahull=0))
     fig.show()
 
+    # remove background
+    fig.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False )
+
     return fig
 
 # 3D plot with negative flips
@@ -64,7 +67,7 @@ def vector_features_plot(tvects, correct_feat, adj_nf_feat, non_adj_nf_feat, cla
             coords = [[o,np.sum([o,v],axis=0)] for o,v in zip(orig,tvects)]
     else:
         coords = tvects
-
+    #colors = ['gray','gray','gray', 'purple', 'gray', 'green', 'gray', 'gray', 'gray', 'gray']
     data = []
     for i,c in enumerate(coords):
         X1, Y1, Z1 = zip(c[0])
@@ -72,10 +75,11 @@ def vector_features_plot(tvects, correct_feat, adj_nf_feat, non_adj_nf_feat, cla
         vector = go.Scatter3d(x = [X1[0],X2[0]],
                               y = [Y1[0],Y2[0]],
                               z = [Z1[0],Z2[0]],
-                              marker = dict(size = [0,5],
+                              line=dict(width = 12),            #color = colors[i] if needed
+                              marker = dict(size = [7,7],
                                             color = ['blue'],
-                                            line=dict(width=5,
-                                                      color='DarkSlateGrey')),
+                                            line=dict(width=100,
+                                                      color='black')),
                               name = classes[i])
         data.append(vector)
     layout = go.Layout(
@@ -114,6 +118,9 @@ def vector_features_plot(tvects, correct_feat, adj_nf_feat, non_adj_nf_feat, cla
         color='red'),
     name = 'Non adjacent Negative flips'
     ))
+
+    # remove background
+    fig.update_scenes(xaxis_visible=False, yaxis_visible=False,zaxis_visible=False )
 
     fig.show()
 

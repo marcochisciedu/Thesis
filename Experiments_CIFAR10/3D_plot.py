@@ -4,6 +4,7 @@ import argparse, yaml
 from dotenv import load_dotenv
 import numpy as np
 import torch
+import plotly
 from airbench94 import CifarLoader, make_net, evaluate
 
 import sys, os
@@ -17,6 +18,7 @@ hyp = {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
     },
     'nfr' : False,                  # if True the NFR points are added to the 3D plot
+    'add_convex_hull': True,        # if a convex hull is added to the 3D plot, only in the regular 3D plot
     'old_model_name' : None,        # the name of the worse older model that is going to be used in NFR calculation
 }
 
@@ -44,6 +46,7 @@ def main():
         wandb_name= "3D plot with NFR "+ model_name[1:-4]
     else:
         wandb_name = "3D plot "+ model_name[1:-4]
+        hyp['add_convex_hull'] = loaded_params['add_convex_hull']
 
     # Get env variables
     load_dotenv()
@@ -88,11 +91,17 @@ def main():
         impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat = class_negative_flip_rate_features(hyp['class_index'],old_model, model, test_loader, impr = True)
         
         vect_feat_fig= vector_features_plot(W,correct_features, adj_nf_features, non_adj_nf_features, classes)
+        vect_feat_fig.write_image("CIFAR-10 3D plot with neg flip features.pdf")
         impr_vect_feat_fig = vector_features_plot(W,  impr_correct_feat, impr_adj_nf_feat, impr_non_adj_feat, classes )
+        impr_vect_feat_fig.write_image("CIFAR-10 3D plot with improved neg flip features.pdf")
         wandb.log({"3d plot with "+ classes[hyp['class_index']]+ " features and nfr" : wandb.Plotly(vect_feat_fig)})
         wandb.log({"3d plot with "+ classes[hyp['class_index']]+ " features and improved nfr" : wandb.Plotly(impr_vect_feat_fig)})
     else:
-        fig = vector_plot(W, classes)
+        fig = vector_plot(W, classes, add_convex_hull=hyp['add_convex_hull'])
+        if hyp['add_convex_hull']:
+            fig.write_image("CIFAR-10 3D plot with convex hull.pdf")
+        else:
+            fig.write_image("CIFAR-10 3D plot.pdf")
         wandb.log({"3d plot classes' prototypes and convex hull" : wandb.Plotly(fig)})
 
 
