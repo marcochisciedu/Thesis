@@ -28,6 +28,8 @@ hyp = {
     'net': {
         'backbone': 'resnet18',         # resnet 18/34/50/101/152
         'feat_dim' : 3,                 # features' dimension
+        'old_backbone': 'resnet18',     # backbone of the old model
+        'old_feat_dim': 512,            # feat dim of the old model
     },
     'data': {
         'num_classes': 100,
@@ -56,6 +58,8 @@ def define_hyp(loaded_params):
         hyp['old_model_name'] = loaded_params['old_model_name']
         old_subset_list = loaded_params['old_subset_list']
         hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
+        hyp['net']['old_backbone'] = loaded_params['old_backbone']
+        hyp['net']['old_feat_dim'] = loaded_params['old_feat_dim']
     hyp['dSimplex'] = loaded_params['dSimplex']
 
 
@@ -129,8 +133,8 @@ def main():
     
     # Get old model if needed to calculate NFR 
     if hyp['nfr']:
-        old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
-                                    device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
+        old_model = create_model(hyp['net']['old_backbone'], False, hyp['net']['old_feat_dim'], len( hyp['data']['old_subset_list']), 
+                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
         # Dataset used to train the old model
         _, cifar100_old_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
     else:
@@ -144,7 +148,7 @@ def main():
         new_model_full_top1,new_model_full_top5 = [], []
         if hyp['nfr']: 
             new_model_old_top1, new_model_old_top5,  old_model_top1, old_model_top5 = [], [], [], []
-            nfrs, impr_nfrs = [], []
+            nfrs, impr_nfrs, rel_nfrs, rel_impr_nfrs = [], [], [], []
 
     for i in range(hyp['num_models']):
         if hyp['num_models'] > 1:
@@ -163,13 +167,17 @@ def main():
         if hyp['nfr']:  
             nfr, _, _ = negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output= True)
             impr_nfr, _ , _ = improved_negative_flip_rate(old_model, model, cifar100_old_test_loader, dict_output=True)
-            print(f"Negative flip rate : {nfr}")
-            print(f"Improved negative flip rate: {impr_nfr}")
-            wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr}, step= i)
 
-            # Test both models using only the classes used to train the old model
+            # Test both models using only the classes used to train the old model and calculate relative NFR
             new_old_top1, new_old_top5 = test_model(model, cifar100_old_test_loader, wandb_run,  step= i, wandb_log_name= " New model old test set")
             old_top1, old_top5 = test_model(old_model, cifar100_old_test_loader, wandb_run,  step= i, wandb_log_name= " Old model old test set")
+            rel_nfr = relative_negative_flip_rate(nfr, old_top1, new_old_top1)
+            rel_impr_nfr = relative_negative_flip_rate(impr_nfr, old_top1, new_old_top1)
+
+            print(f"Negative flip rate : {nfr} and Relative NFR: {rel_nfr}")
+            print(f"Improved negative flip rate: {impr_nfr} and Relative Improved NFR: {rel_impr_nfr}")
+            wandb.log({'NFR':nfr, 'Improved NFR': impr_nfr, 'Relative_NFR': rel_nfr,
+                       'Relative Improved NFR': rel_impr_nfr}, step= i)
 
         if hyp['num_models'] > 1:
             new_model_full_top1.append(new_top1.detach().cpu().numpy())
@@ -181,13 +189,16 @@ def main():
                 old_model_top5.append(old_top5.detach().cpu().numpy()) 
                 nfrs.append(nfr)
                 impr_nfrs.append(impr_nfr)
+                rel_nfrs.append(rel_nfr.detach().cpu().numpy())
+                rel_impr_nfrs.append(rel_impr_nfr.detach().cpu().numpy())
 
     if hyp['num_models'] > 1:
         wandb.log({'Mean new model top1 accuracy':np.mean(new_model_full_top1), 'Mean new model top5 accuracy': np.mean(new_model_full_top5)})
         if hyp['nfr']: 
             wandb.log({'Mean new model old test set top1 accuracy':np.mean(new_model_old_top1), 'Mean new model old test set top5 accuracy': np.mean(new_model_old_top5),
                        'Mean old model top1 accuracy':np.mean(old_model_top1), 'Mean old model top5 accuracy': np.mean(old_model_top5)})
-            wandb.log({'Mean NFR':np.mean(nfrs), 'Mean Improved NFR': np.mean(impr_nfrs)})
+            wandb.log({'Mean NFR':np.mean(nfrs), 'Mean Improved NFR': np.mean(impr_nfrs),
+                       'Mean Relative NFR': np.mean(rel_nfrs), 'Mean Relative Improved NFR': np.mean(rel_impr_nfrs)})
 
     wandb.finish()
 

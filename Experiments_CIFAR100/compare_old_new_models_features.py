@@ -24,6 +24,8 @@ hyp = {
     'net': {
         'backbone': 'resnet18',         # resnet 18/34/50/101/152
         'feat_dim' : 3,                 # features' dimension
+        'old_backbone': 'resnet18',     # backbone of the old model
+        'old_feat_dim': 512,            # feat dim of the old model
     },
     'data': {
         'num_classes': 100,
@@ -50,6 +52,8 @@ def define_hyp(loaded_params):
     hyp['old_model_name'] = loaded_params['old_model_name']
     old_subset_list = loaded_params['old_subset_list']
     hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
+    hyp['net']['old_backbone'] = loaded_params['old_backbone']
+    hyp['net']['old_feat_dim'] = loaded_params['old_feat_dim']
 
     hyp['k'] = loaded_params['k']
 
@@ -96,8 +100,8 @@ def main():
     _, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
 
     # Get old model
-    old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
-                                    device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
+    old_model = create_model(hyp['net']['old_backbone'], False, hyp['net']['old_feat_dim'], len( hyp['data']['old_subset_list']), 
+                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
 
     mean_mutual_knn_alignments, all_mutual_knn_alignments = [], []
     for name_index in range(len(model_names)):      # iterate through each type of new model

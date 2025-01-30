@@ -34,6 +34,8 @@ hyp = {
         'backbone': 'resnet18',         # resnet 18/34/50/101/152
         'feat_dim' : 512,               # features' dimension
         'pretrained' : False,           # if the trained model is fine tuned from a pretrained model
+        'old_backbone': 'resnet18',     # backbone of the old model
+        'old_feat_dim': 512,            # feat dim of the old model
     },
     'data': {
         'num_classes': 100,
@@ -82,6 +84,8 @@ def define_hyp(loaded_params):
         hyp['old_model_name'] = loaded_params['old_model_name']
         old_subset_list = loaded_params['old_subset_list']
         hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
+        hyp['net']['old_backbone'] = loaded_params['old_backbone']
+        hyp['net']['old_feat_dim'] = loaded_params['old_feat_dim']
     
     if hyp['loss'] == 'Focal Distillation':
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
@@ -199,7 +203,7 @@ def main():
             config=hyp)
         # Get old model if needed to calculate NFR or a loss
         if hyp['nfr'] or hyp['loss'] != 'default':
-            old_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], len( hyp['data']['old_subset_list']), 
+            old_model = create_model(hyp['net']['old_backbone'], False, hyp['net']['old_feat_dim'], len( hyp['data']['old_subset_list']), 
                                      device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
             # Get the correct dataset to test the NFR
             print(f'Creating and loading Negative Flip Rate dataset')
