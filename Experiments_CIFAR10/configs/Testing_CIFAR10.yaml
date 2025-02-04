@@ -1,18 +1,21 @@
 # Name of the trained model
-model_name : /50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109
+model_name : /Big_features_Regular_Training_CIFAR10_100_onpercent_15epochs:v0
 
 # Number of models that are going to be trained
 num_models : 100
 batch_size : 2000
 
+# Number of classes that the model can classify
+num_classes: 10
 # List of classes that have a lower percentage of images, if null all the images are going to be used
-low_class_list: [0,1,2,3,4]
+low_class_list: [5,6,7,8,9]
 
 # Features' dimension, if the dSimplex is used feat_dim = num_classes -1
-feat_dim : 3
+feat_dim : 256
 # If the classifier is a dSimplex
 dSimplex : False
 
 # If NFR is going to be calculated after testing
 nfr: True
-old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+old_model : /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_num_classes : 5
