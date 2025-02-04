@@ -107,26 +107,17 @@ def mutual_knn_alignment_features(features_v1, features_v2, k):
                 
     return intersection/k
 
-# Convert old class indices to the new model's class indices
-def old_to_new_class_indices(knn_old, indices):
-    for index in range(len(indices)):
-        for j in range(len((knn_old[index]))):
-            knn_old[index][j] = indices[knn_old[index][j]]
-       
-    return knn_old
-
 # Calculate the intersection between k nearest neighbors of a single model to all the others
 def mutual_knn_alignment_one_model_prototype(W_old, W_array, k, indices):
     knn_alignment = np.zeros((W_array.shape[0]) ,dtype= float)
     knn_vectors = []
     # Find distances and knn vectors for each set of prototypes
     for i in range(W_array.shape[0]):
-        tmp_distances = vectors_distances(W_array[i])
-        knn_vectors.append(find_knn_vectors(tmp_distances, k)[indices])
+        tmp_distances = vectors_distances(W_array[i][indices])
+        knn_vectors.append(find_knn_vectors(tmp_distances, k))
 
     old_distances = vectors_distances(W_old[indices])
     knn_old= find_knn_vectors(old_distances,k)
-    knn_old = old_to_new_class_indices(knn_old, indices)
 
     # Find intersection between each old-new model class prototype
     for W_index in range(W_array.shape[0]):   # iterate through each model
