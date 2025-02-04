@@ -1,11 +1,13 @@
 # Name of the trained model
-model_name : No_dSimplx_old_No_dSimplexFull
+model_name : Big_features_Regular_Training
 
 # Number of models that are going to be trained
 num_models : 100
 # percentage of CIFAR10 to use
 percentage : 100
 
+# Number of classes that the model will classify
+num_classes: 10
 # List of classes that have a lower percentage of images, if null all the images are going to be used
 low_class_list: null
 # List containing the images' percentage used for each class in low_class_list
@@ -13,13 +15,17 @@ low_percentage: None
 
 epochs : 15
 
+# Seed for reproducibility
+seed : 111
+
 # Features' dimension, if the dSimplex is used feat_dim = num_classes -1
-feat_dim : 9
+feat_dim : 256      # standard is 256
 # If the classifier is a dSimplex
 dSimplex : False
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model : /No_dSimplexHalf_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_model : /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_num_classes : 5
 
 loss: 'default'

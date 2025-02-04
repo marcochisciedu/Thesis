@@ -10,6 +10,7 @@ import os
 import sys
 import wandb
 import argparse, yaml
+import numpy as np
 from math import ceil
 from dotenv import load_dotenv
 
@@ -59,6 +60,8 @@ hyp = {
             'block2': 256,
             'block3': 256,
         },
+        'num_classes' : 10,
+        'old_num_classes' : 5,
         'batchnorm_momentum': 0.6,
         'scaling_factor': 1/9,
         'tta_level': 2,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
@@ -81,6 +84,7 @@ hyp = {
         'kl_temperature' : 100,
         'lambda' : 1,
     },
+    'seed': 111,                    # For reproducibility
 }
 
 #############################################
@@ -259,12 +263,13 @@ class ConvGroup(nn.Module):
 #            Network Definition             #
 #############################################
 
-def make_net(feat_dim =3):
+def make_net(feat_dim =3, num_classes =10):
     widths = hyp['net']['widths']
     batchnorm_momentum = hyp['net']['batchnorm_momentum']
     whiten_kernel_size = 2
     whiten_width = 2 * 3 * whiten_kernel_size**2
-    net = nn.Sequential(
+    if widths['block3'] == feat_dim:
+        net = nn.Sequential(
         Conv(3, whiten_width, whiten_kernel_size, padding=0, bias=True),
         nn.GELU(),
         ConvGroup(whiten_width,     widths['block1'], batchnorm_momentum),
@@ -272,10 +277,22 @@ def make_net(feat_dim =3):
         ConvGroup(widths['block2'], widths['block3'], batchnorm_momentum),
         nn.MaxPool2d(3),
         Flatten(),
-        nn.Linear(widths['block3'], feat_dim, bias=False),
-        nn.Linear(feat_dim, 10, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
+        nn.Linear(widths['block3'], num_classes, bias=False),
         Mul(hyp['net']['scaling_factor']),
     )
+    else:
+        net = nn.Sequential(
+            Conv(3, whiten_width, whiten_kernel_size, padding=0, bias=True),
+            nn.GELU(),
+            ConvGroup(whiten_width,     widths['block1'], batchnorm_momentum),
+            ConvGroup(widths['block1'], widths['block2'], batchnorm_momentum),
+            ConvGroup(widths['block2'], widths['block3'], batchnorm_momentum),
+            nn.MaxPool2d(3),
+            Flatten(),
+            nn.Linear(widths['block3'], feat_dim, bias=False),
+            nn.Linear(feat_dim, num_classes, bias=False),  # added linear layer to bottleneck the softmax layer (unargmaxability)
+            Mul(hyp['net']['scaling_factor']),
+        )
     net[0].weight.requires_grad = False
     net = net.half().cuda()
     net = net.to(memory_format=torch.channels_last)
@@ -366,12 +383,12 @@ def evaluate(model, loader, tta_level=0):
 #            Easier model loading          #
 ############################################
 
-def load_trained_model(model_path, wandb_run, feat_dim):
+def load_trained_model(model_path, wandb_run, feat_dim, num_classes):
     """
     Load a trained model from a given path.
     """
     # Replace with your model architecture
-    model = make_net(feat_dim)
+    model = make_net(feat_dim, num_classes)
     artifact = wandb_run.use_artifact(WANDB_PROJECT+model_path, type='model')
     artifact_dir = artifact.download()
     model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
@@ -390,6 +407,12 @@ def main(model_name, run):
         name = model_name+"_CIFAR10_"+ str(hyp['data']['percentage'])+"/" + str(hyp['data']['low_percentage'])+ "percent_"
          +str(hyp['opt']['train_epochs'])+ "epochs",
         config=hyp)
+    
+    # For reproducibility
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.manual_seed(hyp['seed']+run)
+    np.random.seed(hyp['seed']+run)
     
     batch_size = hyp['opt']['batch_size']
     epochs = hyp['opt']['train_epochs']
@@ -412,7 +435,7 @@ def main(model_name, run):
         train_loader.labels = torch.randint(0, 10, size=(len(train_loader.labels),), device=train_loader.labels.device)
     total_train_steps = ceil(len(train_loader) * epochs)
 
-    model = make_net(hyp['net']['feat_dim'])
+    model = make_net(hyp['net']['feat_dim'], hyp['net']['num_classes'])
     if hyp['dSimplex']:
         fixed_weights = dsimplex(num_classes=10)
         model[8].weight.requires_grad = False  # set no gradient for the fixed classifier
@@ -420,7 +443,7 @@ def main(model_name, run):
 
     current_steps = 0
     if hyp['nfr']:
-        old_model = load_trained_model(hyp['old_model_name'], wandb_run, hyp['net']['feat_dim'])
+        old_model = load_trained_model(hyp['old_model_name'], wandb_run, hyp['net']['feat_dim'], hyp['net']['old_num_classes'])
 
     norm_biases = [p for k, p in model.named_parameters() if 'norm' in k and p.requires_grad]
     other_params = [p for k, p in model.named_parameters() if 'norm' not in k and p.requires_grad]
@@ -580,9 +603,12 @@ if __name__ == "__main__":
     hyp['data']['low_percentage'] = loaded_params['low_percentage']
     hyp['nfr'] = loaded_params['nfr']
     hyp['net']['feat_dim'] = loaded_params['feat_dim']
+    hyp['net']['num_classes'] = loaded_params['num_classes']
     hyp['dSimplex'] = loaded_params['dSimplex']
+    hyp['seed'] = loaded_params['seed']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
+        hyp['net']['old_num_classes'] = loaded_params['old_num_classes']
     hyp['loss'] = loaded_params['loss']
     if hyp['loss'] == 'Focal Distillation':
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']

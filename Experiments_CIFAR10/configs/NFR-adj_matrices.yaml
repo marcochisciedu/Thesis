@@ -1,10 +1,14 @@
 # Name of the old model to calculate NFR
-old_model_name: /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+old_model_name: /Better_First_5_Classes_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
 # New model's name. Models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
-new_model_name: /50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200
+new_model_name: /Better_FD_L2_lambda_50_CIFAR10_100_onpercent_15epochs:v0
 
 # Features' dimension, if the dSimplex is used feat_dim = num_classes -1
-feat_dim : 9
+feat_dim : 3
+
+# Num classes of the old and new model
+num_classes: 10
+old_num_classes: 5
 
 # Number of new models 
 num_models: 100

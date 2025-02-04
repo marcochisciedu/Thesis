@@ -16,6 +16,9 @@ from plot import *
 hyp = {
     'net': {
         'tta_level': 0,         # the level of test-time augmentation: 0=none, 1=mirror, 2=mirror+translate
+        'feat_dim': 3,
+        'num_classes':10,
+        'old_num_classes': 5,
     },
     'nfr' : False,                  # if True the NFR points are added to the 3D plot
     'add_convex_hull': True,        # if a convex hull is added to the 3D plot, only in the regular 3D plot
@@ -39,9 +42,12 @@ def main():
     with open(params.config_path, 'r') as stream:
         loaded_params = yaml.safe_load(stream)
     model_name = loaded_params['model_name']
+    hyp['net']['feat_dim'] = loaded_params['feat_dim']
+    hyp['net']['num_classes'] = loaded_params['num_classes']
     hyp['nfr'] = loaded_params['nfr']
     if hyp['nfr'] == True:
         hyp['old_model_name'] = loaded_params['old_model']
+        hyp['net']['old_num_classes'] = loaded_params['old_num_classes']
         hyp['class_index'] = loaded_params['class_index']
         wandb_name= "3D plot with NFR "+ model_name[1:-4]
     else:
@@ -67,7 +73,7 @@ def main():
 
     print(model_name)
     # Get model
-    model = make_net(feat_dim= 3)
+    model = make_net(feat_dim= hyp['net']['feat_dim'], num_classes= hyp['net']['num_classes'] )
     artifact = wandb_run.use_artifact(WANDB_PROJECT+model_name, type='model')
     artifact_dir = artifact.download()
     model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
@@ -83,7 +89,7 @@ def main():
     W = model[8].weight.detach().cpu().numpy().astype(np.float32)
     # 3d plot with negative flips features or prototypes' convex hull
     if hyp['nfr'] == True:
-        old_model = make_net(feat_dim= 3)
+        old_model = make_net(feat_dim= hyp['net']['feat_dim'], num_classes=hyp['net']['old_num_classes'])
         artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
         artifact_dir = artifact.download()
         old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))

@@ -1,10 +1,15 @@
 # Name of the model to 3D plot
-model_name: /NFR_CIFAR10_100_100percent_15epochs:v102
+model_name: /Better_Regular_Training_CIFAR10_100_onpercent_15epochs:v0
+
+# Net parameters
+feat_dim : 3
+num_classes : 10
 
 # If the negative flip are going to be calculated and shown in the 3D plot, if false the prototypes'
 # convex hull is shown
 nfr: True
-old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+old_model : /Better_First_5_Classes_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_num_classes: 5
 # Which class is choosen to calculate the negative flips
 # classes = ['plane', 'car', 'bird', 'cat','deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-class_index : 5
+class_index : 3

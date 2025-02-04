@@ -1,31 +1,33 @@
 # Name of the wandb run
-run_name: "Comparing features, batch size: 100"
+run_name: "Comparing bigger features, batch size: 200 k:10"
 
 # List of the each first new model's name. 
 #New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
-model_names: [/NFR_CIFAR10_100_100percent_15epochs:v102, 
-/50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109,
-/50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200]
+model_names: [/Big_features_Regular_Training_CIFAR10_100_onpercent_15epochs:v0, 
+/Big_features_KL_lambda_50_CIFAR10_100_onpercent_15epochs:v0,
+/Big_features_L2_lambda_50_CIFAR10_100_onpercent_15epochs:v0]
 
 # Features' dimension, if the dSimplex is used feat_dim = num_classes -1
-feat_dim : 3
+feat_dim : 256
 
 # Batch size, how many features are compared together
-batch_size: 100
+batch_size: 200
 
 # Labels used in the graph for each group of models
-labels : ['Regular Training', 'Focal Distillation L2', 'Focal Distillation KL']
+labels : ['Regular Training', 'FD KL', 'FD L2']
 # Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
 colors : ['limegreen', 'firebrick', 'royalblue']
 
 # Number of models to compare 
 num_models: 100
+num_classes: 10
 
 # Old model's name
-old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+old_model : /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_num_classes : 5
 # The old model can be trained on less classes than the new model, these are the indices of the 
 # classes shared by all the models. Must be in ascending order
-old_model_classes_indices: [5,6,7,8,9]
+old_model_classes_indices: [0,1,2,3,4]
 
 # Used k
 k: 10

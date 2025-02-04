@@ -1,8 +1,12 @@
 # Name of the model to 3D plot
-model_name: /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
+model_name: /Better_First_5_Classes_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+
+# Net parameters
+feat_dim : 3
+num_classes : 10
 
 # If the negative flip are going to be calculated and shown in the 3D plot
 nfr: False
 
 # If a convex hull is added to the 3D plot, only possible if there is no negative flips calculations
-add_convex_hull : True
+add_convex_hull : False

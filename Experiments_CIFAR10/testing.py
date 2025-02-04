@@ -16,6 +16,8 @@ from print_and_logging import *
 hyp = {
     'net': {
         'feat_dim' : 3,                 # features' dimension
+        'num_classes': 10,              # num classes of the new model
+        'old_num_classes': 5,           # num classes of the old model
     },
     'batch_size': 2000,                 # Batch size, how many features are compared together
     'num_models': 100,
@@ -44,7 +46,9 @@ def main():
     hyp['net']['feat_dim'] = loaded_params['feat_dim']
     hyp['batch_size'] = loaded_params['batch_size']
     hyp['num_models'] = loaded_params['num_models']
+    hyp['net']['num_classes'] = loaded_params['num_classes']
     hyp['old_model_name'] = loaded_params['old_model']
+    hyp['net']['old_num_classes'] = loaded_params['old_num_classes']
     hyp['low_class_list'] = loaded_params['low_class_list']
     hyp['nfr'] = loaded_params['nfr']
     # Get env variables
@@ -64,7 +68,7 @@ def main():
     
      # Get old model if needed to calculate NFR 
     if hyp['nfr']:
-        old_model = make_net( hyp['net']['feat_dim'])
+        old_model = make_net( hyp['net']['feat_dim'], hyp['net']['old_num_classes'])
         artifact = wandb_run.use_artifact(WANDB_PROJECT+hyp['old_model_name'], type='model')
         artifact_dir = artifact.download()
         old_model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
@@ -91,7 +95,7 @@ def main():
             current_model_name = model_name
 
         # Load model
-        model = make_net( hyp['net']['feat_dim'])
+        model = make_net( hyp['net']['feat_dim'], hyp['net']['num_classes'])
         artifact = wandb_run.use_artifact(WANDB_PROJECT+current_model_name, type='model')
         artifact_dir = artifact.download()
         model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
