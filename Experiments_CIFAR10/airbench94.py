@@ -301,6 +301,15 @@ def make_net(feat_dim =3, num_classes =10):
             mod.float()
     return net
 
+# Extract image features given a model
+def extract_features(model, images):
+    # First conv
+    x = model[0](images)
+    # TODO: remove one more layer if the feat dim is not 256
+    for layer in list(model.children())[1:-2]: # remove the linear and Mul layers
+        x = layer(x)
+    return x
+
 #############################################
 #       Whitening Conv Initialization       #
 #############################################
@@ -394,6 +403,12 @@ def load_trained_model(model_path, wandb_run, feat_dim, num_classes):
     model.load_state_dict(torch.load(artifact_dir+'/model.pth'))
     model.eval()
     return model
+
+def l2_norm(input, axis=1):
+    norm = torch.norm(input, 2, axis, True)
+    output = torch.div(input, norm)
+
+    return output
        
 ############################################
 #                Training                  #
@@ -492,7 +507,35 @@ def main(model_name, run):
         for inputs, labels in train_loader:
 
             outputs = model(inputs)
-            if hyp['loss'] == 'Focal Distillation':
+            if hyp['loss'] == 'New stuff':
+                loss_CE = loss_fn(outputs, labels).sum()
+                loss = loss_CE 
+                if hyp['CF']: # add contrastive features loss
+                    # Extract and normilize the old and new features
+                    new_features= extract_features(model, inputs)
+                    new_features = l2_norm(new_features)
+                    old_features = extract_features(old_model, inputs)
+                    old_features = l2_norm(old_features)
+                    contr_feat_loss = ContrastiveFeaturesLoss(hyp['tau_f'])
+                    loss_CF = contr_feat_loss(old_features, new_features, labels, hyp['net']['num_classes'],
+                                               hyp['net']['old_num_classes'], hyp['only_old'])
+                    loss += hyp['lambda_f']*loss_CF 
+                if hyp['CP']: # add contrastive prototypes loss
+                    # Extract and normilize the old and new models class prototypes
+                    new_prototypes = model[-2].weight
+                    new_prototypes = l2_norm(new_prototypes)
+                    old_prototypes = old_model[-2].weight
+                    old_prototypes = l2_norm(old_prototypes)
+                    contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
+                    loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
+                    loss += hyp['lambda_p']*loss_CP 
+                if hyp['FD']: # add focal distillation
+                    old_outputs = old_model(inputs)
+                    fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+                    loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
+                    loss += hyp['fd']['lambda']*loss_focal_distillation
+            elif hyp['loss'] == 'Focal Distillation':
                 # Get old model's prediction
                 old_outputs = old_model(inputs)
                 fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
@@ -610,7 +653,21 @@ if __name__ == "__main__":
         hyp['old_model_name'] = loaded_params['old_model']
         hyp['net']['old_num_classes'] = loaded_params['old_num_classes']
     hyp['loss'] = loaded_params['loss']
-    if hyp['loss'] == 'Focal Distillation':
+    FD = False
+    if hyp['loss'] == 'New stuff':
+        hyp['FD'] = loaded_params['FD']
+        if hyp['FD']:
+            FD = True
+        hyp['CF'] = loaded_params['CF']
+        if hyp['CF']:
+            hyp['tau_f']= loaded_params['tau_f']
+            hyp['lambda_f']= loaded_params['lambda_f']
+            hyp['only_old']= loaded_params['only_old']
+        hyp['CP'] = loaded_params['CP']
+        if hyp['CP']:
+            hyp['tau_p']= loaded_params['tau_p']
+            hyp['lambda_p']= loaded_params['lambda_p']
+    if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']
         hyp['fd']['focus_type'] = loaded_params['focus_type']

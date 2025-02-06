@@ -84,15 +84,15 @@ def main():
     print("Softmax Evaluate compatibility with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Softmax Evaluate compatibility with projection  "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
+        name = "Softmax Evaluate compatibility with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
         config=hyp)
 
     # Get the whole CIFAR100 dataset
     _, val_loader = create_dataloaders('cifar100', DATASET_PATH, hyp['opt']['batch_size'], subset_list= hyp['data']['subset_list'])
 
     # Load gallery model
-    gallery_model = create_model(hyp['net']['old_backbone'], False, hyp['net']['old_feat_dim'], len( hyp['data']['old_subset_list']), 
-                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
+    gallery_model = create_model(hyp['net']['old_backbone'], False, hyp['net']['old_feat_dim'], hyp['data']['num_classes_gallery_model'], 
+                                     device, WANDB_PROJECT+hyp['gallery_model_name'], wandb_run )
     
     # collect all the performance metrics
     cmc_top1,cmc_top5, mAPs = [], [],[]

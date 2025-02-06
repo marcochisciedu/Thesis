@@ -90,3 +90,105 @@ class FocalDistillationLoss(nn.Module):
 
         # weighted sum of losses
         return (sample_loss * loss_weights).mean()
+    
+class ContrastiveFeaturesLoss(nn.Module):
+    def __init__(self, tau):
+        super(ContrastiveFeaturesLoss, self).__init__()
+        self.tau = tau
+    
+    def forward(self, 
+                feat_new, 
+                feat_old, 
+                labels, 
+                new_cls_num, 
+                old_cls_num,
+                only_old=True
+               ):
+        loss = self._loss(feat_old, feat_new, labels, new_cls_num, old_cls_num, only_old)
+        return loss
+
+    def _loss(self, feat_old, feat_new, labels, new_cls_num, old_cls_num, only_old):
+        """Calculates infoNCE loss on the features extracted by the old and new model.
+            The embedding size should be the same
+        Args:
+            feat_old:
+                features extracted with the old model.
+                Shape: (batch_size, embedding_size)
+            feat_new:
+                features extracted with the new model.
+                Shape: (batch_size, embedding_size)
+            labels:
+                Labels of the images.
+                Shape: (batch_size,) 
+            new_cls_num:
+                Number of classes of the new model
+            old_cls_num:
+                Number of classes of the old model
+            only_old: 
+                Use only features of images that belong to the old classes
+        Returns:
+            Mean loss over the mini-batch.
+        """
+        # Select only features of images that belong to the old classes
+        if (old_cls_num != new_cls_num) & only_old:
+            mask = labels < min(new_cls_num, old_cls_num) # mask samples belong to new classes
+            labels = labels[mask]
+            feat_new = feat_new[mask] # align output dim
+            feat_old = feat_old[mask]
+        
+        ## Create diagonal mask that only selects similarities between
+        ## representations of the same images
+        batch_size = feat_old.shape[0]
+        diag_mask = torch.eye(batch_size, device=feat_old.device, dtype=torch.bool)
+        sim_01 = torch.einsum("nc,mc->nm", feat_old, feat_new) *  self.tau
+
+        positive_loss = -sim_01[diag_mask]
+        # Get the labels of feat_old and feat_new samples
+        labels_0 = labels.unsqueeze(1).expand(-1, batch_size)  # Shape: (batch_size, batch_size)
+        labels_1 = labels.unsqueeze(0).expand(batch_size, -1)  # Shape: (batch_size, batch_size)
+
+        # Mask similarities between the same class
+        class_mask = labels_0 == labels_1
+        sim_01 = (sim_01* (~class_mask)).view(batch_size, -1)   
+
+        negative_loss_01 = torch.logsumexp(sim_01, dim=1)
+        return (positive_loss + negative_loss_01).mean()
+    
+class ContrastivePrototypeLoss(nn.Module):
+    def __init__(self, tau):
+        super(ContrastivePrototypeLoss, self).__init__()
+        self.tau = tau
+    
+    def forward(self, 
+                prototype_new, 
+                prototype_old):
+        loss = self._loss(prototype_old, prototype_new)
+        return loss
+
+    def _loss(self, prototype_old, prototype_new):
+        """Calculates infoNCE loss on the class prototypes of the old and new model.
+
+        Args:
+            prototype_old:
+                class prototypes of the old model.
+                Shape: (num_old_prototypes, embedding_size)
+            prototype_new:
+                class prototypes of the new model.
+                Shape: (num_new_prototypes, embedding_size)                   
+        """
+        # Select only the class prototypes that both models share
+        if prototype_old.shape[0] != prototype_new.shape[0]:
+            prototype_old = prototype_old[:min(prototype_old.shape[0], prototype_new.shape[0])]
+            prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
+
+        ## create diagonal mask that only selects similarities between
+        ## the same class prototype
+        num_prototypes = prototype_old.shape[0]
+        diag_mask = torch.eye(num_prototypes, device=prototype_old.device, dtype=torch.bool)
+        sim_01 = torch.einsum("nc,mc->nm", prototype_old, prototype_new) *  self.tau
+        positive_loss = -sim_01[diag_mask]
+
+        # Get the other class prototypes
+        sim_01 = (sim_01* (~diag_mask)).view(num_prototypes, -1)
+        negative_loss_01 = torch.logsumexp(sim_01, dim=1)
+        return (positive_loss + negative_loss_01).mean()
