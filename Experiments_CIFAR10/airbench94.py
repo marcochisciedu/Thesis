@@ -442,6 +442,20 @@ def main(model_name, run):
     lr_biases = lr * hyp['opt']['bias_scaler']
 
     loss_fn = nn.CrossEntropyLoss(label_smoothing=hyp['opt']['label_smoothing'], reduction='none')
+    if (hyp['loss'] == 'New stuff') :
+        if hyp['CF']: 
+            contr_feat_loss = ContrastiveFeaturesLoss(hyp['tau_f'])
+        if hyp['CP']: 
+            contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
+        if hyp['CPL']:
+            cosine_loss = CosinePrototypeLoss()
+        if hyp['FD']: 
+            fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                        hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+    elif hyp['loss'] == 'Focal Distillation':
+        fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+               
     test_loader = CifarLoader('cifar10', train=False, batch_size=2000)
     train_loader = CifarLoader('cifar10', train=True, batch_size=batch_size, aug=hyp['aug'], percentage = hyp['data']['percentage'],
                                 list_low_classes= hyp['data']['low_classes'], low_percentage= hyp['data']['low_percentage'])
@@ -516,7 +530,6 @@ def main(model_name, run):
                     new_features = l2_norm(new_features)
                     old_features = extract_features(old_model, inputs)
                     old_features = l2_norm(old_features)
-                    contr_feat_loss = ContrastiveFeaturesLoss(hyp['tau_f'])
                     loss_CF = contr_feat_loss(old_features, new_features, labels, hyp['net']['num_classes'],
                                                hyp['net']['old_num_classes'], hyp['only_old'])
                     loss += hyp['lambda_f']*loss_CF 
@@ -526,20 +539,23 @@ def main(model_name, run):
                     new_prototypes = l2_norm(new_prototypes)
                     old_prototypes = old_model[-2].weight
                     old_prototypes = l2_norm(old_prototypes)
-                    contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
                     loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
                     loss += hyp['lambda_p']*loss_CP 
+                if hyp['CPL']: # add cosine prototypes loss
+                    # Extract and normilize the old and new models class prototypes
+                    new_prototypes = model[-2].weight
+                    new_prototypes = l2_norm(new_prototypes)
+                    old_prototypes = old_model[-2].weight
+                    old_prototypes = l2_norm(old_prototypes)
+                    loss_CPL = cosine_loss(old_prototypes, new_prototypes)
+                    loss += hyp['lambda_cpl']*loss_CPL 
                 if hyp['FD']: # add focal distillation
                     old_outputs = old_model(inputs)
-                    fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
-                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
                     loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
                     loss += hyp['fd']['lambda']*loss_focal_distillation
             elif hyp['loss'] == 'Focal Distillation':
                 # Get old model's prediction
                 old_outputs = old_model(inputs)
-                fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
-                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
                 loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
                 loss_CE = loss_fn(outputs, labels).sum()
                 loss = loss_CE + hyp['fd']['lambda']*loss_focal_distillation
@@ -667,6 +683,9 @@ if __name__ == "__main__":
         if hyp['CP']:
             hyp['tau_p']= loaded_params['tau_p']
             hyp['lambda_p']= loaded_params['lambda_p']
+        hyp['CPL'] = loaded_params['CPL']
+        if hyp['CPL']:
+            hyp['lambda_cpl']= loaded_params['lambda_cpl']
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']

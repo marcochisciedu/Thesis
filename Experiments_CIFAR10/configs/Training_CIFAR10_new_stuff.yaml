@@ -1,5 +1,5 @@
 # Name of the trained model
-model_name : New_stuff_CP_50_CF_50
+model_name : New_stuff_CP_50_Test
 
 # Number of models that are going to be trained
 num_models : 10
@@ -34,15 +34,18 @@ FD: False        # add FD to loss
 fd_alpha : 1
 fd_beta : 5
 focus_type : 'old_correct'
-distillation_type : 'l2'
+distillation_type : 'kl'
 kl_temperature : 100
 lambda : 50
 
-CF : True      # add Contrastive Feature Loss
+CF : False      # add Contrastive Feature Loss
 tau_f:  10
 lambda_f: 50
 only_old: False   # if the loss is applied only to features of images that belong to the old classes
 
-CP : True      # add Contrastive Prototype Loss
+CP : False      # add Contrastive Prototype Loss
 tau_p:  10
 lambda_p: 50
+
+CPL: True       # add Cosine Prototype Loss
+lambda_cpl: 50    

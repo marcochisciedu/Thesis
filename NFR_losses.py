@@ -160,8 +160,8 @@ class ContrastivePrototypeLoss(nn.Module):
         self.tau = tau
     
     def forward(self, 
-                prototype_new, 
-                prototype_old):
+                prototype_old, 
+                prototype_new):
         loss = self._loss(prototype_old, prototype_new)
         return loss
 
@@ -187,8 +187,38 @@ class ContrastivePrototypeLoss(nn.Module):
         diag_mask = torch.eye(num_prototypes, device=prototype_old.device, dtype=torch.bool)
         sim_01 = torch.einsum("nc,mc->nm", prototype_old, prototype_new) *  self.tau
         positive_loss = -sim_01[diag_mask]
-
         # Get the other class prototypes
         sim_01 = (sim_01* (~diag_mask)).view(num_prototypes, -1)
         negative_loss_01 = torch.logsumexp(sim_01, dim=1)
         return (positive_loss + negative_loss_01).mean()
+    
+class CosinePrototypeLoss(nn.Module):
+    def __init__(self):
+        super(CosinePrototypeLoss, self).__init__()
+        self.cosine_loss  = nn.CosineEmbeddingLoss()
+    def forward(self, 
+                prototype_old, 
+                prototype_new):
+        loss = self._loss(prototype_old, prototype_new)
+        return loss
+
+    def _loss(self, prototype_old, prototype_new):
+        """Calculates infoNCE loss on the class prototypes of the old and new model.
+
+        Args:
+            prototype_old:
+                class prototypes of the old model.
+                Shape: (num_old_prototypes, embedding_size)
+            prototype_new:
+                class prototypes of the new model.
+                Shape: (num_new_prototypes, embedding_size)                   
+        """
+        # Select only the class prototypes that both models share
+        if prototype_old.shape[0] != prototype_new.shape[0]:
+            prototype_old = prototype_old[:min(prototype_old.shape[0], prototype_new.shape[0])]
+            prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
+
+        cosine_prototype_loss = self.cosine_loss(prototype_old, prototype_new, torch.ones(prototype_old.size(0)).cuda())
+       
+        return cosine_prototype_loss
+    
