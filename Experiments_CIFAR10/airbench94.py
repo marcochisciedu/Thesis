@@ -449,6 +449,8 @@ def main(model_name, run):
             contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
         if hyp['CPL']:
             cosine_loss = CosinePrototypeLoss()
+        if hyp['CDP']:
+            cosine_diff_loss = CosineDifferencePrototypeLoss()    
         if hyp['FD']: 
             fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                         hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
@@ -549,6 +551,14 @@ def main(model_name, run):
                     old_prototypes = l2_norm(old_prototypes)
                     loss_CPL = cosine_loss(old_prototypes, new_prototypes)
                     loss += hyp['lambda_cpl']*loss_CPL 
+                if hyp['CDP']: # add cosine prototypes loss
+                    # Extract and normilize the old and new models class prototypes
+                    new_prototypes = model[-2].weight
+                    new_prototypes = l2_norm(new_prototypes)
+                    old_prototypes = old_model[-2].weight
+                    old_prototypes = l2_norm(old_prototypes)
+                    loss_CDP = cosine_diff_loss(old_prototypes, new_prototypes)
+                    loss += hyp['lambda_cdp']*loss_CDP 
                 if hyp['FD']: # add focal distillation
                     old_outputs = old_model(inputs)
                     loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
@@ -686,6 +696,9 @@ if __name__ == "__main__":
         hyp['CPL'] = loaded_params['CPL']
         if hyp['CPL']:
             hyp['lambda_cpl']= loaded_params['lambda_cpl']
+        hyp['CDP'] = loaded_params['CDP']
+        if hyp['CDP']:
+            hyp['lambda_cdp']= loaded_params['lambda_cdp']    
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']
