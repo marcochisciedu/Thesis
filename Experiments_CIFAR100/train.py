@@ -86,8 +86,27 @@ def define_hyp(loaded_params):
         hyp['data']['old_subset_list'] = list(range(old_subset_list[0], old_subset_list[1], old_subset_list[2]))
         hyp['net']['old_backbone'] = loaded_params['old_backbone']
         hyp['net']['old_feat_dim'] = loaded_params['old_feat_dim']
-    
-    if hyp['loss'] == 'Focal Distillation':
+    FD = False
+    if hyp['loss'] == 'New stuff':
+        hyp['FD'] = loaded_params['FD']
+        if hyp['FD']:
+            FD = True
+        hyp['CF'] = loaded_params['CF']
+        if hyp['CF']:
+            hyp['tau_f']= loaded_params['tau_f']
+            hyp['lambda_f']= loaded_params['lambda_f']
+            hyp['only_old']= loaded_params['only_old']
+        hyp['CP'] = loaded_params['CP']
+        if hyp['CP']:
+            hyp['tau_p']= loaded_params['tau_p']
+            hyp['lambda_p']= loaded_params['lambda_p']
+        hyp['CPL'] = loaded_params['CPL']
+        if hyp['CPL']:
+            hyp['lambda_cpl']= loaded_params['lambda_cpl']
+        hyp['CDP'] = loaded_params['CDP']
+        if hyp['CDP']:
+            hyp['lambda_cdp']= loaded_params['lambda_cdp']    
+    if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']
         hyp['fd']['focus_type'] = loaded_params['focus_type']
@@ -104,24 +123,77 @@ def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_mod
     model.train()
     losses = []
 
+    if hyp['loss'] == 'New stuff':
+        if hyp['CF']: 
+            contr_feat_loss = ContrastiveFeaturesLoss(hyp['tau_f'])
+        if hyp['CP']: 
+            contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
+        if hyp['CPL']:
+            cosine_loss = CosinePrototypeLoss()
+        if hyp['CDP']:
+            cosine_diff_loss = CosineDifferencePrototypeLoss()    
+        if hyp['FD']: 
+            fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                        hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+    elif hyp['loss'] == 'Focal Distillation':
+        fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
+                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+
     for (images, labels) in dataloader:
 
         labels = labels.cuda()
         images = images.cuda()
 
         optimizer.zero_grad()
-        logits = model(images)['logits']  # the model's output is a dictionary
+        outputs = model(images)  # the model's output is a dictionary
 
-        if hyp['loss'] == 'Focal Distillation' and old_model != None:
-                # Get old model's prediction
+        if hyp['loss'] == 'New stuff':
+            loss_CE = loss_function(outputs['logits'], labels).sum()
+            loss = loss_CE 
+            if hyp['CF']: # add contrastive features loss
+                # Extract and normilize the old and new features
+                new_features = l2_norm(outputs['features'])
+                old_outputs= old_model(images)
+                old_features = l2_norm(old_outputs['features'])
+                loss_CF = contr_feat_loss(old_features, new_features, labels,hyp['data']['num_classes'],
+                                            len( hyp['data']['old_subset_list']), hyp['only_old'])
+                loss += hyp['lambda_f']*loss_CF 
+            if hyp['CP']: # add contrastive prototypes loss
+                # Extract and normilize the old and new models class prototypes
+                new_prototypes = model.fc2.weight
+                new_prototypes = l2_norm(new_prototypes)
+                old_prototypes = old_model.fc2.weight
+                old_prototypes = l2_norm(old_prototypes)
+                loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
+                loss += hyp['lambda_p']*loss_CP 
+            if hyp['CPL']: # add cosine prototypes loss
+                # Extract and normilize the old and new models class prototypes
+                new_prototypes = model.fc2.weight
+                new_prototypes = l2_norm(new_prototypes)
+                old_prototypes = old_model.fc2.weight
+                old_prototypes = l2_norm(old_prototypes)
+                loss_CPL = cosine_loss(old_prototypes, new_prototypes)
+                loss += hyp['lambda_cpl']*loss_CPL 
+            if hyp['CDP']: # add cosine prototypes loss
+                # Extract and normilize the old and new models class prototypes
+                new_prototypes = model.fc2.weight
+                new_prototypes = l2_norm(new_prototypes)
+                old_prototypes = old_model.fc2.weight
+                old_prototypes = l2_norm(old_prototypes)
+                loss_CDP = cosine_diff_loss(old_prototypes, new_prototypes)
+                loss += hyp['lambda_cdp']*loss_CDP 
+            if hyp['FD']: # add focal distillation
                 old_logits = old_model(images)['logits'] 
-                fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
-                                               hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
-                loss_focal_distillation = fd_loss(logits, old_logits, labels)
-                default_loss = loss_function(logits, labels).sum()
-                loss = default_loss + hyp['fd']['lambda']*loss_focal_distillation
+                loss_focal_distillation = fd_loss(outputs['logits'], old_logits, labels)
+                loss += hyp['fd']['lambda']*loss_focal_distillation
+        elif hyp['loss'] == 'Focal Distillation':
+            # Get old model's prediction
+            old_logits = old_model(images)['logits'] 
+            loss_focal_distillation = fd_loss(outputs['logits'], old_logits, labels)
+            default_loss = loss_function(outputs['logits'], labels).sum()
+            loss = default_loss + hyp['fd']['lambda']*loss_focal_distillation
         else:
-            loss = loss_function(logits, labels).sum()
+            loss = loss_function(outputs['logits'], labels).sum()
 
         loss.backward()
         losses.append( loss.item())
