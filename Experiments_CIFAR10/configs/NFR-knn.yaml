@@ -1,0 +1,18 @@
+# Name of the old model to calculate NFR
+old_model_name: /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+# New model's name. Models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
+new_model_name: /Big_features_Regular_Training_CIFAR10_100_onpercent_15epochs:v0
+
+# Features' dimension, if the dSimplex is used feat_dim = num_classes -1
+feat_dim : 256
+
+# Number of classes that the model can classify
+num_classes: 10
+# List of classes that have a lower percentage of images, if null all the images are going to be used
+low_class_list: [5,6,7,8,9]
+
+# Number of new models 
+num_models: 100
+
+# Number of nearest neighbors
+k : 1

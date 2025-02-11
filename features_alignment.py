@@ -219,6 +219,44 @@ def plot_alignment(knn_alignment_matrix, indices, k):
 
     return fig
 
+
+############################################
+#            K-Nearest Neighbors           #
+############################################
+# Calculates the adjacency matrix of the prototypes
+def calculate_knn_matrix(W,k):
+    # Initialize the knn matrix
+    knn_matrix = np.zeros((W.shape[0], W.shape[0]), dtype=int)
+    
+    distances = vectors_distances(W)
+    knn_vectors = find_knn_vectors(distances,k)
+    
+    for i in range(len(knn_vectors)):  # iterate through the classes
+        for value in knn_vectors[i]:   # iterate through each nearest neighbor
+            knn_matrix[i][value] = 1
+
+    # Show the adjacency matrix
+    return knn_matrix
+
+# Calculate and show the sum of all the adjacency matrices
+def knn_matrices_sum(knn_matrices, classes, figsize = (12,7), annot = True):
+    summed_matrix = np.zeros((knn_matrices.shape[1], knn_matrices.shape[2]), dtype = int)
+
+    # Sum all the adjacency matrices
+    for i in range(knn_matrices.shape[0]):
+        summed_matrix += knn_matrices[i]
+
+    df_sum, figure_sum = df_plot_heatmap(summed_matrix, classes,'Sum of all the knn matrices', "Purples", 'd', 
+                                        "", "", vmin = 0, vmax =knn_matrices.shape[0] , figsize= figsize, annot= annot )
+    
+    # Create the correspondent percentages matrix
+    percent_matrix = summed_matrix.astype(float)
+    percent_matrix = percent_matrix/(knn_matrices.shape[0])*100
+
+    df_sum_per, figure_per = df_plot_heatmap(percent_matrix, classes, 'Percentage of connections between classes', "Purples", '.1f',
+                                             "", "", vmin=0, vmax = 100, figsize= figsize, annot= annot)
+    
+    return df_sum, df_sum_per, figure_sum, figure_per
 ############################################
 #          Negative flip features          #
 ############################################
