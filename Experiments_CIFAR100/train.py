@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
 from NFR_losses import *
 from fixed_classifiers import *
+from features_alignment import calculate_knn_matrix
 torch.backends.cudnn.benchmark = True
 
 """
@@ -105,7 +106,13 @@ def define_hyp(loaded_params):
             hyp['lambda_cpl']= loaded_params['lambda_cpl']
         hyp['CDP'] = loaded_params['CDP']
         if hyp['CDP']:
-            hyp['lambda_cdp']= loaded_params['lambda_cdp']    
+            hyp['lambda_cdp']= loaded_params['lambda_cdp']   
+        hyp['PACE'] = loaded_params['PACE']
+        if hyp['PACE']:
+            hyp['lambda_pa'] = loaded_params['lambda_pa']
+            hyp['k'] = loaded_params['k']
+            hyp['guide_model'] = loaded_params['guide_model']
+            hyp['num_guide_models'] = loaded_params['num_guide_models'] 
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']
@@ -294,14 +301,26 @@ def main():
         # Set up training
         optimizer = optim.SGD(model.parameters(), lr=hyp['opt']['lr'], momentum=hyp['opt']['momentum'], weight_decay=hyp['opt']['weight_decay'])
         train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=hyp['opt']['milestones'], gamma=0.2) #learning rate decay
-        cross_entropy_loss = nn.CrossEntropyLoss()
+        if (hyp['loss'] == 'New stuff')& hyp['PACE']:
+            knn_matrix = np.zeros((hyp['data']['num_classes'], hyp['data']['num_classes']))
+            for i in range(hyp['num_guide_models']):
+                current_guide_model_name =  hyp['guide_model'].split(":v")[0]+":v"+str(i+int(hyp['guide_model'].split(":v")[1]))
+                guide_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
+                                        device, WANDB_PROJECT+current_guide_model_name, wandb_run )
+                W_guide= guide_model.fc2.weight.detach().cpu().numpy().astype(np.float32)
+                knn_matrix += calculate_knn_matrix(W_guide, hyp['k'])
+            knn_matrix= (knn_matrix >= (hyp['num_guide_models']/ 2)).astype(int)
+            knn_matrix= torch.from_numpy(knn_matrix).float().cuda()
+            loss = ProximityAwareCrossEntropyLoss(knn_matrix, hyp['lambda_pa'])
+        else:
+            loss = nn.CrossEntropyLoss()
 
         best_acc = 0
         for epoch in range(1, hyp['opt']['train_epochs'] + 1):
             # Train and evaluate the model
-            train(model, epoch, optimizer, cifar100_train_loader, cross_entropy_loss, wandb_run, old_model)
+            train(model, epoch, optimizer, cifar100_train_loader, loss, wandb_run, old_model)
             train_scheduler.step()
-            val_acc = eval_training(model, epoch, cifar100_test_loader, cross_entropy_loss, wandb_run)
+            val_acc = eval_training(model, epoch, cifar100_test_loader, loss, wandb_run)
 
             # Calculate NFR after nfr_eval epochs or if it is the last epoch
             if hyp['nfr'] and (epoch % hyp['nfr_eval'] == 0 or epoch == hyp['opt']['train_epochs']):  

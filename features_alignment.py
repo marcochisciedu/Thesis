@@ -223,7 +223,7 @@ def plot_alignment(knn_alignment_matrix, indices, k):
 ############################################
 #            K-Nearest Neighbors           #
 ############################################
-# Calculates the adjacency matrix of the prototypes
+# Calculates the knn matrix of the prototypes
 def calculate_knn_matrix(W,k):
     # Initialize the knn matrix
     knn_matrix = np.zeros((W.shape[0], W.shape[0]), dtype=int)
@@ -238,11 +238,11 @@ def calculate_knn_matrix(W,k):
     # Show the adjacency matrix
     return knn_matrix
 
-# Calculate and show the sum of all the adjacency matrices
+# Calculate and show the sum of all the knn matrices
 def knn_matrices_sum(knn_matrices, classes, figsize = (12,7), annot = True):
     summed_matrix = np.zeros((knn_matrices.shape[1], knn_matrices.shape[2]), dtype = int)
 
-    # Sum all the adjacency matrices
+    # Sum all the knn matrices
     for i in range(knn_matrices.shape[0]):
         summed_matrix += knn_matrices[i]
 
@@ -257,6 +257,30 @@ def knn_matrices_sum(knn_matrices, classes, figsize = (12,7), annot = True):
                                              "", "", vmin=0, vmax = 100, figsize= figsize, annot= annot)
     
     return df_sum, df_sum_per, figure_sum, figure_per
+
+def guide_model_knn_matrix(guide_model, dataloader, k):
+    # Remove the classification layer of the model to extract the image features
+    guide_model.fc = torch.nn.Identity()
+
+    guide_model.eval()
+    features = {}
+    with torch.no_grad():
+        for images, labels in dataloader:
+            images = images.cuda()
+            images = images.type(torch.cuda.FloatTensor)
+            img_feats = guide_model(images)  # Extract features
+            for i, label in enumerate(labels):
+                if label.item() not in features:
+                    features[label.item()] = []
+                features[label.item()].append(img_feats[i].cpu().numpy())
+
+    class_prototypes_matrix =  np.zeros((len(features),len(features[0][0])))
+    for label, features in features.items():
+        class_prototypes_matrix[label] = np.mean(features, axis=0)
+    knn_matrix = calculate_knn_matrix(class_prototypes_matrix, k)
+    
+    return knn_matrix
+
 ############################################
 #          Negative flip features          #
 ############################################

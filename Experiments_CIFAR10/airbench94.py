@@ -19,12 +19,14 @@ from torch import nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as T
+from torchvision.models import resnet18
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
 from NFR_losses import *
 from fixed_classifiers import *
+from features_alignment import *
 torch.backends.cudnn.benchmark = True
 
 # We express the main training hyperparameters (batch size, learning rate, momentum, and weight decay)
@@ -441,7 +443,11 @@ def main(model_name, run):
     wd = hyp['opt']['weight_decay'] * batch_size / kilostep_scale
     lr_biases = lr * hyp['opt']['bias_scaler']
 
-    loss_fn = nn.CrossEntropyLoss(label_smoothing=hyp['opt']['label_smoothing'], reduction='none')
+    test_loader = CifarLoader('cifar10', train=False, batch_size=2000)
+    train_loader = CifarLoader('cifar10', train=True, batch_size=batch_size, aug=hyp['aug'], percentage = hyp['data']['percentage'],
+                                list_low_classes= hyp['data']['low_classes'], low_percentage= hyp['data']['low_percentage'])
+    
+    loss_fn = nn.CrossEntropyLoss( label_smoothing=hyp['opt']['label_smoothing'], reduction='none')
     if (hyp['loss'] == 'New stuff') :
         if hyp['CF']: 
             contr_feat_loss = ContrastiveFeaturesLoss(hyp['tau_f'])
@@ -454,13 +460,26 @@ def main(model_name, run):
         if hyp['FD']: 
             fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                         hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
+        if hyp['PACE']:
+            if hyp['pretrained']:
+                guide_model = resnet18(weights="IMAGENET1K_V1")
+                guide_model.cuda()
+
+                knn_matrix = guide_model_knn_matrix(guide_model, train_loader, hyp['k'])
+            else:
+                knn_matrix = np.zeros((hyp['net']['num_classes'], hyp['net']['num_classes']))
+                for i in range(hyp['num_guide_models']):
+                    current_guide_model_name =  hyp['guide_model'].split(":v")[0]+":v"+str(i+int(hyp['guide_model'].split(":v")[1]))
+                    guide_model = load_trained_model(current_guide_model_name, wandb_run, hyp['net']['feat_dim'], hyp['net']['num_classes'])
+                    W_guide= guide_model[-2].weight.detach().cpu().numpy().astype(np.float32)
+                    knn_matrix += calculate_knn_matrix(W_guide, hyp['k'])
+                knn_matrix = knn_matrix / hyp['num_guide_models']
+            knn_matrix= torch.from_numpy(knn_matrix).float().cuda()
+            pace_loss = ProximityAwareCrossEntropyLoss(knn_matrix, hyp['lambda_pa'])
     elif hyp['loss'] == 'Focal Distillation':
         fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                                hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
                
-    test_loader = CifarLoader('cifar10', train=False, batch_size=2000)
-    train_loader = CifarLoader('cifar10', train=True, batch_size=batch_size, aug=hyp['aug'], percentage = hyp['data']['percentage'],
-                                list_low_classes= hyp['data']['low_classes'], low_percentage= hyp['data']['low_percentage'])
     if run == 'warmup':
         # The only purpose of the first run is to warmup, so we can use dummy data
         train_loader.labels = torch.randint(0, 10, size=(len(train_loader.labels),), device=train_loader.labels.device)
@@ -524,8 +543,11 @@ def main(model_name, run):
 
             outputs = model(inputs)
             if hyp['loss'] == 'New stuff':
-                loss_CE = loss_fn(outputs, labels).sum()
-                loss = loss_CE 
+                if hyp['PACE']:
+                    loss = pace_loss(outputs, labels)
+                else:
+                    loss_CE = loss_fn(outputs, labels).sum()
+                    loss = loss_CE 
                 if hyp['CF']: # add contrastive features loss
                     # Extract and normilize the old and new features
                     new_features= extract_features(model, inputs)
@@ -699,6 +721,13 @@ if __name__ == "__main__":
         hyp['CDP'] = loaded_params['CDP']
         if hyp['CDP']:
             hyp['lambda_cdp']= loaded_params['lambda_cdp']    
+        hyp['PACE'] = loaded_params['PACE']
+        if hyp['PACE']:
+            hyp['lambda_pa'] = loaded_params['lambda_pa']
+            hyp['k'] = loaded_params['k']
+            hyp['pretrained'] = loaded_params['pretrained']
+            hyp['guide_model'] = loaded_params['guide_model']
+            hyp['num_guide_models'] = loaded_params['num_guide_models']
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']

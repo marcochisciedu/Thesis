@@ -219,7 +219,7 @@ class CosinePrototypeLoss(nn.Module):
             prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
 
         cosine_prototype_loss = self.cosine_loss(prototype_old, prototype_new, torch.ones(prototype_old.size(0)).cuda())
-       
+        
         return cosine_prototype_loss
     
 def self_cosine_distances(input):
@@ -260,3 +260,37 @@ class CosineDifferencePrototypeLoss(nn.Module):
         difference_distance = torch.abs(self_dist_old- self_dist_new)
         return torch.sum(difference_distance)
     
+class ProximityAwareCrossEntropyLoss(nn.Module):
+    def __init__(self, knn_matrix, lambda_pa):
+        super(ProximityAwareCrossEntropyLoss, self).__init__()
+        self.knn_matrix = knn_matrix
+        self.lambda_pa = lambda_pa
+    def forward(self,
+                logits,
+                targets):
+        loss = self._loss(logits, targets)
+        return loss
+
+    def _loss(self, logits, targets):
+        """Calculates Cross Entropy Loss with a higher penalty for misclassification between 
+        classes that are near each other
+
+        Args:
+            logits:
+                output of the model
+                Shape: (batch_size, num_classes)
+            targets:
+                ground truth of each image
+                Shape: (batch_size)                   
+        """
+
+        # Gather class Knn for each sample
+        knn = self.knn_matrix[targets]  # Shape: (B, C)
+
+        # Compute penalty weights
+        weights =  1 #+ self.lambda_pa * knn  # Shape: (B, C)
+
+        lp = logits - ((logits.exp() * weights) + 1e-09).sum(-1).log().unsqueeze(-1)
+        loss_ce = F.nll_loss(lp, targets)
+        
+        return loss_ce

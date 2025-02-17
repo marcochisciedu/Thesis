@@ -1,0 +1,25 @@
+# Name of the new model
+model_name: /Re-Training_full_CIFAR100:v0
+# Number of new models
+num_models: 5
+
+# Name of the old model to calculate NFR and subset of classes it was trained on
+old_model_name : /Re-Training_CIFAR100_first_50_classes_numclasses_50:v0
+old_subset_list: [0,50,1]
+
+# Testing dataloader's batch size
+batch_size : 128
+
+# ResNet parameters
+backbone: 'resnet18'
+feat_dim : 512
+
+# Dataset parameters
+num_classes : 100
+subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), None = all classes
+
+# If the classifier is a dSimplex
+dSimplex : False
+
+# Number of nearest neighbors
+k : 10
