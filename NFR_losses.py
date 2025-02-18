@@ -283,14 +283,12 @@ class ProximityAwareCrossEntropyLoss(nn.Module):
                 ground truth of each image
                 Shape: (batch_size)                   
         """
-
         # Gather class Knn for each sample
         knn = self.knn_matrix[targets]  # Shape: (B, C)
 
         # Compute penalty weights
-        weights =  1 #+ self.lambda_pa * knn  # Shape: (B, C)
+        weights =  1 + self.lambda_pa * knn  # Shape: (B, C)
 
         lp = logits - ((logits.exp() * weights) + 1e-09).sum(-1).log().unsqueeze(-1)
         loss_ce = F.nll_loss(lp, targets)
-        
         return loss_ce

@@ -1,4 +1,4 @@
-wandb_name: "Test"  
+wandb_name: "Test PACE"  
 
 # Training hyperparameters
 train_epochs : 200
@@ -60,7 +60,7 @@ CDP: False       # add Cosine Difference Prototype Loss
 lambda_cdp: 0.1
 
 PACE: True
-lambda_pa : 0
+lambda_pa : 1
 k : 10
 guide_model: /Re-Training_full_CIFAR100:v0 # name of the guide model to calculate knn_matrix
 num_guide_models: 5
