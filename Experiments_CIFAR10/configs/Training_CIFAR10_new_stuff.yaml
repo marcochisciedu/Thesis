@@ -50,12 +50,3 @@ lambda_p: 75
 CPL: False       # add Cosine Prototype Loss
 lambda_cpl: 1
 
-CDP: False       # add Cosine Difference Prototype Loss
-lambda_cdp: 50
-
-PACE: True
-lambda_pa : 0
-k : 3
-pretrained: True    # If the knn matrix is going to be calculated with a pretrained model or the average of regularly trained ones
-guide_model: /Big_features_Regular_Training_CIFAR10_100_onpercent_15epochs:v0 # name of the guide model to calculate knn_matrix
-num_guide_models: 100

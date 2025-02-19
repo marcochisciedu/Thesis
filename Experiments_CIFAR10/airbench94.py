@@ -455,27 +455,9 @@ def main(model_name, run):
             contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
         if hyp['CPL']:
             cosine_loss = CosinePrototypeLoss()
-        if hyp['CDP']:
-            cosine_diff_loss = CosineDifferencePrototypeLoss()    
         if hyp['FD']: 
             fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                         hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
-        if hyp['PACE']:
-            if hyp['pretrained']:
-                guide_model = resnet18(weights="IMAGENET1K_V1")
-                guide_model.cuda()
-
-                knn_matrix = guide_model_knn_matrix(guide_model, train_loader, hyp['k'])
-            else:
-                knn_matrix = np.zeros((hyp['net']['num_classes'], hyp['net']['num_classes']))
-                for i in range(hyp['num_guide_models']):
-                    current_guide_model_name =  hyp['guide_model'].split(":v")[0]+":v"+str(i+int(hyp['guide_model'].split(":v")[1]))
-                    guide_model = load_trained_model(current_guide_model_name, wandb_run, hyp['net']['feat_dim'], hyp['net']['num_classes'])
-                    W_guide= guide_model[-2].weight.detach().cpu().numpy().astype(np.float32)
-                    knn_matrix += calculate_knn_matrix(W_guide, hyp['k'])
-                knn_matrix = knn_matrix / hyp['num_guide_models']
-            knn_matrix= torch.from_numpy(knn_matrix).float().cuda()
-            pace_loss = ProximityAwareCrossEntropyLoss(knn_matrix, hyp['lambda_pa'])
     elif hyp['loss'] == 'Focal Distillation':
         fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                                hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
@@ -543,44 +525,33 @@ def main(model_name, run):
 
             outputs = model(inputs)
             if hyp['loss'] == 'New stuff':
-                if hyp['PACE']:
-                    loss = pace_loss(outputs, labels)
-                else:
-                    loss_CE = loss_fn(outputs, labels).sum()
-                    loss = loss_CE 
-                if hyp['CF']: # add contrastive features loss
-                    # Extract and normilize the old and new features
+                loss_CE = loss_fn(outputs, labels).sum()
+                loss = loss_CE 
+                if hyp['CF']: 
+                    # Extract and normalize the old and new features
                     new_features= extract_features(model, inputs)
                     new_features = l2_norm(new_features)
                     old_features = extract_features(old_model, inputs)
                     old_features = l2_norm(old_features)
                     loss_CF = contr_feat_loss(old_features, new_features, labels, hyp['net']['num_classes'],
                                                hyp['net']['old_num_classes'], hyp['only_old'])
-                    loss += hyp['lambda_f']*loss_CF 
-                if hyp['CP']: # add contrastive prototypes loss
-                    # Extract and normilize the old and new models class prototypes
+                    loss += hyp['lambda_f']*loss_CF # add contrastive features loss
+                if hyp['CP']: 
+                    # Extract and normalize the old and new model's class prototypes
                     new_prototypes = model[-2].weight
                     new_prototypes = l2_norm(new_prototypes)
                     old_prototypes = old_model[-2].weight
                     old_prototypes = l2_norm(old_prototypes)
                     loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
-                    loss += hyp['lambda_p']*loss_CP 
-                if hyp['CPL']: # add cosine prototypes loss
-                    # Extract and normilize the old and new models class prototypes
+                    loss += hyp['lambda_p']*loss_CP # add contrastive prototypes loss
+                if hyp['CPL']: 
+                    # Extract and normalize the old and new model's class prototypes
                     new_prototypes = model[-2].weight
                     new_prototypes = l2_norm(new_prototypes)
                     old_prototypes = old_model[-2].weight
                     old_prototypes = l2_norm(old_prototypes)
                     loss_CPL = cosine_loss(old_prototypes, new_prototypes)
-                    loss += hyp['lambda_cpl']*loss_CPL 
-                if hyp['CDP']: # add cosine prototypes loss
-                    # Extract and normilize the old and new models class prototypes
-                    new_prototypes = model[-2].weight
-                    new_prototypes = l2_norm(new_prototypes)
-                    old_prototypes = old_model[-2].weight
-                    old_prototypes = l2_norm(old_prototypes)
-                    loss_CDP = cosine_diff_loss(old_prototypes, new_prototypes)
-                    loss += hyp['lambda_cdp']*loss_CDP 
+                    loss += hyp['lambda_cpl']*loss_CPL # add cosine prototypes loss
                 if hyp['FD']: # add focal distillation
                     old_outputs = old_model(inputs)
                     loss_focal_distillation = fd_loss(outputs, old_outputs, labels)
@@ -592,7 +563,7 @@ def main(model_name, run):
                 loss_CE = loss_fn(outputs, labels).sum()
                 loss = loss_CE + hyp['fd']['lambda']*loss_focal_distillation
             else:
-                loss = loss_fn(outputs, labels).sum()
+                loss = loss_fn(outputs, labels).sum()  # only Cross entropy
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
@@ -718,16 +689,6 @@ if __name__ == "__main__":
         hyp['CPL'] = loaded_params['CPL']
         if hyp['CPL']:
             hyp['lambda_cpl']= loaded_params['lambda_cpl']
-        hyp['CDP'] = loaded_params['CDP']
-        if hyp['CDP']:
-            hyp['lambda_cdp']= loaded_params['lambda_cdp']    
-        hyp['PACE'] = loaded_params['PACE']
-        if hyp['PACE']:
-            hyp['lambda_pa'] = loaded_params['lambda_pa']
-            hyp['k'] = loaded_params['k']
-            hyp['pretrained'] = loaded_params['pretrained']
-            hyp['guide_model'] = loaded_params['guide_model']
-            hyp['num_guide_models'] = loaded_params['num_guide_models']
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']

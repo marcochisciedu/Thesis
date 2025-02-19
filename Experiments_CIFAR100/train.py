@@ -104,9 +104,6 @@ def define_hyp(loaded_params):
         hyp['CPL'] = loaded_params['CPL']
         if hyp['CPL']:
             hyp['lambda_cpl']= loaded_params['lambda_cpl']
-        hyp['CDP'] = loaded_params['CDP']
-        if hyp['CDP']:
-            hyp['lambda_cdp']= loaded_params['lambda_cdp']   
         hyp['PACE'] = loaded_params['PACE']
         if hyp['PACE']:
             hyp['lambda_pa'] = loaded_params['lambda_pa']
@@ -137,8 +134,6 @@ def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_mod
             contr_proto_loss = ContrastivePrototypeLoss(hyp['tau_p'])
         if hyp['CPL']:
             cosine_loss = CosinePrototypeLoss()
-        if hyp['CDP']:
-            cosine_diff_loss = CosineDifferencePrototypeLoss()    
         if hyp['FD']: 
             fd_loss= FocalDistillationLoss(hyp['fd']['fd_alpha'], hyp['fd']['fd_beta'], hyp['fd']['focus_type'],
                                         hyp['fd']['distillation_type'], hyp['fd']['kl_temperature'] )
@@ -157,38 +152,33 @@ def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_mod
         if hyp['loss'] == 'New stuff':
             loss_CE = loss_function(outputs['logits'], labels).sum()
             loss = loss_CE 
-            if hyp['CF']: # add contrastive features loss
-                # Extract and normilize the old and new features
+            if hyp['CF']: 
+                # Extract and normalize the old and new features
                 new_features = l2_norm(outputs['features'])
                 old_outputs= old_model(images)
                 old_features = l2_norm(old_outputs['features'])
+                
                 loss_CF = contr_feat_loss(old_features, new_features, labels,hyp['data']['num_classes'],
                                             len( hyp['data']['old_subset_list']), hyp['only_old'])
-                loss += hyp['lambda_f']*loss_CF 
-            if hyp['CP']: # add contrastive prototypes loss
-                # Extract and normilize the old and new models class prototypes
+                loss += hyp['lambda_f']*loss_CF  # add contrastive features loss
+            if hyp['CP']: 
+                # Extract and normalize the old and new model's class prototypes
                 new_prototypes = model.fc2.weight
                 new_prototypes = l2_norm(new_prototypes)
                 old_prototypes = old_model.fc2.weight
                 old_prototypes = l2_norm(old_prototypes)
+
                 loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
-                loss += hyp['lambda_p']*loss_CP 
-            if hyp['CPL']: # add cosine prototypes loss
-                # Extract and normilize the old and new models class prototypes
+                loss += hyp['lambda_p']*loss_CP # add contrastive prototypes loss
+            if hyp['CPL']: 
+                # Extract and normalize the old and new model's class prototypes
                 new_prototypes = model.fc2.weight
                 new_prototypes = l2_norm(new_prototypes)
                 old_prototypes = old_model.fc2.weight
                 old_prototypes = l2_norm(old_prototypes)
+
                 loss_CPL = cosine_loss(old_prototypes, new_prototypes)
-                loss += hyp['lambda_cpl']*loss_CPL 
-            if hyp['CDP']: # add cosine prototypes loss
-                # Extract and normilize the old and new models class prototypes
-                new_prototypes = model.fc2.weight
-                new_prototypes = l2_norm(new_prototypes)
-                old_prototypes = old_model.fc2.weight
-                old_prototypes = l2_norm(old_prototypes)
-                loss_CDP = cosine_diff_loss(old_prototypes, new_prototypes)
-                loss += hyp['lambda_cdp']*loss_CDP 
+                loss += hyp['lambda_cpl']*loss_CPL # add cosine prototypes loss
             if hyp['FD']: # add focal distillation
                 old_logits = old_model(images)['logits'] 
                 loss_focal_distillation = fd_loss(outputs['logits'], old_logits, labels)
@@ -200,7 +190,7 @@ def train(model, epoch, optimizer, dataloader, loss_function, wandb_run, old_mod
             default_loss = loss_function(outputs['logits'], labels).sum()
             loss = default_loss + hyp['fd']['lambda']*loss_focal_distillation
         else:
-            loss = loss_function(outputs['logits'], labels).sum()
+            loss = loss_function(outputs['logits'], labels).sum() 
 
         loss.backward()
         losses.append( loss.item())

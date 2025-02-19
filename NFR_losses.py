@@ -167,6 +167,7 @@ class ContrastivePrototypeLoss(nn.Module):
 
     def _loss(self, prototype_old, prototype_new):
         """Calculates infoNCE loss on the class prototypes of the old and new model.
+        The embedding size should be the same
 
         Args:
             prototype_old:
@@ -203,7 +204,8 @@ class CosinePrototypeLoss(nn.Module):
         return loss
 
     def _loss(self, prototype_old, prototype_new):
-        """Calculates infoNCE loss on the class prototypes of the old and new model.
+        """Calculates simple CosineEmbeddingLoss between the class prototypes of the old and new model.
+        The embedding size should be the same
 
         Args:
             prototype_old:
@@ -217,48 +219,11 @@ class CosinePrototypeLoss(nn.Module):
         if prototype_old.shape[0] != prototype_new.shape[0]:
             prototype_old = prototype_old[:min(prototype_old.shape[0], prototype_new.shape[0])]
             prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
-
+        
+        # Higher loss if the prototypes of the old and new model are different
         cosine_prototype_loss = self.cosine_loss(prototype_old, prototype_new, torch.ones(prototype_old.size(0)).cuda())
         
         return cosine_prototype_loss
-    
-def self_cosine_distances(input):
-    norm = torch.norm(input, 2, 1, True)
-    norm_input = torch.div(input, norm)
-    cosine_sim_matrix= torch.mm(norm_input, norm_input.transpose(0,1))
-    return 1-cosine_sim_matrix
-
-class CosineDifferencePrototypeLoss(nn.Module):
-    def __init__(self):
-        super(CosineDifferencePrototypeLoss, self).__init__()
-    def forward(self, 
-                prototype_old, 
-                prototype_new):
-        loss = self._loss(prototype_old, prototype_new)
-        return loss
-
-    def _loss(self, prototype_old, prototype_new):
-        """Calculates infoNCE loss on the class prototypes of the old and new model.
-
-        Args:
-            prototype_old:
-                class prototypes of the old model.
-                Shape: (num_old_prototypes, embedding_size)
-            prototype_new:
-                class prototypes of the new model.
-                Shape: (num_new_prototypes, embedding_size)                   
-        """
-        # Select only the class prototypes that both models share
-        if prototype_old.shape[0] != prototype_new.shape[0]:
-            prototype_old = prototype_old[:min(prototype_old.shape[0], prototype_new.shape[0])]
-            prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
-
-        # Calculate distances between prototype of the old and new model
-        self_dist_old = self_cosine_distances(prototype_old) 
-        self_dist_new = self_cosine_distances(prototype_new) 
-
-        difference_distance = torch.abs(self_dist_old- self_dist_new)
-        return torch.sum(difference_distance)
     
 class ProximityAwareCrossEntropyLoss(nn.Module):
     def __init__(self, knn_matrix, lambda_pa):

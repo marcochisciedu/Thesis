@@ -1,4 +1,4 @@
-wandb_name: "Smaller feat Resnet18 CF_0.5"  
+wandb_name: "Smaller feat Resnet18 CF_0.15_CP_1.5"  
 
 # Training hyperparameters
 train_epochs : 200
@@ -46,17 +46,14 @@ lambda : 1
 
 CF : True      # add Contrastive Feature Loss
 tau_f:  10
-lambda_f: 0.5
+lambda_f: 0.15
 only_old: False   # if the loss is applied only to features of images that belong to the old classes
 
-CP : False      # add Contrastive Prototype Loss
+CP : True      # add Contrastive Prototype Loss
 tau_p:  10
-lambda_p: 1
+lambda_p: 1.5
 
 CPL: False       # add Cosine Prototype Loss
-lambda_cpl: 500    
-
-CDP: False       # add Cosine Difference Prototype Loss
-lambda_cdp: 0.1
+lambda_cpl: 50    
 
 PACE: False
