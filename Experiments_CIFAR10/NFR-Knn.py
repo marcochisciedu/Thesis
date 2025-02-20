@@ -26,7 +26,7 @@ hyp = {
 }
 
 """
-Code to search for the possible correlation between negative flip and the prototypes' adjacency matrix 
+Code to search for the possible correlation between negative flip and the prototypes' KNN (k-Nearest Neighbors) matrix 
 """
 
 def main():
@@ -74,15 +74,15 @@ def main():
     model_v1.load_state_dict(torch.load(artifact_dir+'/model.pth'))
 
     knn_matrices = []
-    flip_matrices, flip_per_mat, nfr_adj_matrices  = [], [], []
-    impr_flip_matrices, impr_flip_per_mat, impr_nfr_adj_matrices  = [], [], []
+    flip_matrices, flip_per_mat, nfr_knn_matrices  = [], [], []
+    impr_flip_matrices, impr_flip_per_mat, impr_nfr_knn_matrices  = [], [], []
 
     for i in range(hyp['num_models']):
         # Get model with better performances
         model_v2 = make_net( hyp['net']['feat_dim'], hyp['net']['num_classes'])
         if hyp['num_models'] > 1:
             current_model_name = new_model_name.split(":v")[0]+":v"+str(i+int(new_model_name.split(":v")[1]))
-            display_all = False  # do not display each adjacency matrix
+            display_all = False  # do not display every knn matrix
         else:
             current_model_name = new_model_name
             display_all = True
@@ -107,7 +107,7 @@ def main():
         tta_val_acc_v2 = evaluate(model_v2, test_loader, tta_level=hyp['net']['tta_level'])
         print("tta_val_acc model v2: "+ str(tta_val_acc_v2))
 
-        # Calculate the NFR, print the flip heatmaps and connect it to the adjacency matrix 
+        # Calculate the NFR, print the flip heatmaps and connect it to the knn matrix 
         nfr, flips, num_flips = negative_flip_rate(model_v1, model_v2, test_loader)
         print("Negative flip rate: "+ str(nfr))
         relative_nfr = relative_negative_flip_rate(nfr, tta_val_acc_v1, tta_val_acc_v2)
@@ -121,7 +121,7 @@ def main():
         else: 
             flip_matrices.append(flips_df.to_numpy())
             flip_per_mat.append(flips_df_per.to_numpy())
-            nfr_adj_matrices.append(df_nfr_knn.to_numpy())
+            nfr_knn_matrices.append(df_nfr_knn.to_numpy())
 
         # Same as before but with the improved NFR
         improved_nfr, impr_flips, impr_num_flips = improved_negative_flip_rate(model_v1, model_v2, test_loader)
@@ -137,14 +137,14 @@ def main():
         else: 
             impr_flip_matrices.append(impr_flips_df.to_numpy())
             impr_flip_per_mat.append(impr_flips_df_per.to_numpy())
-            impr_nfr_adj_matrices.append(impr_df_nfr_knn.to_numpy())
+            impr_nfr_knn_matrices.append(impr_df_nfr_knn.to_numpy())
         
         eval_metrics = {'tta_val_acc_v1': tta_val_acc_v1, 'tta_val_acc_v2': tta_val_acc_v2,
                         'NFR': nfr, 'improved_NFR': improved_nfr,
                         'Relative NFR':relative_nfr , 'Improved relative NFR':improved_relative_nfr}
         wandb.log({**eval_metrics})
     if hyp['num_models']>1:
-        #Calculate and show the sum of all the adjacency matrices
+        #Calculate and show the sum of all the knn matrices
         df_sum_knn, df_sum_per_knn, fig_sum_knn, fig_per_knn= knn_matrices_sum(np.array(knn_matrices), classes)
         print_and_log(df_sum_knn,fig_sum_knn,'Heatmap of the sum of all knn matrices' )
         print_and_log(df_sum_per_knn, fig_per_knn,'Heatmap of the percentage of all knn matrices' )
@@ -157,7 +157,7 @@ def main():
         df_mean_flip_per, fig_mean_flip_per= df_plot_heatmap(mean_flip_per_mat, classes, 'Mean percentage of negative flips', 'Purples',
                                                               '.1f', "New prediction", "Old predictions")
         print_and_log(df_mean_flip_per, fig_mean_flip_per,"Mean heatmap of the negative flips' percentage between classes")
-        neg_per, pos_per = summary_nfr_adj(nfr_adj_matrices, classes)
+        neg_per, pos_per = summary_nfr_adj(nfr_knn_matrices, classes)
         
         # Same code but with the improved NFR
         mean_impr_flip_mat = np.mean(np.array(impr_flip_matrices), axis = 0)
@@ -167,7 +167,7 @@ def main():
         df_mean_impr_flip_per, fig_mean_impr_flip_per= df_plot_heatmap(mean_impr_per_flip_mat, classes, 'Mean percentage of improved negative flips', 'Purples', '.1f',
                                                                        "New prediction", "Old predictions")
         print_and_log(df_mean_impr_flip_per, fig_mean_impr_flip_per,"Mean heatmap of the improved negative flips' percentage between classes")
-        impr_neg_per, impr_pos_per= summary_nfr_adj(impr_nfr_adj_matrices, classes, impr = "Improved")
+        impr_neg_per, impr_pos_per= summary_nfr_adj(impr_nfr_knn_matrices, classes, impr = "Improved")
         
         per_metrics = {'Far classes negative flips percentage': neg_per,
                         'Near negative flips percentage' : pos_per,

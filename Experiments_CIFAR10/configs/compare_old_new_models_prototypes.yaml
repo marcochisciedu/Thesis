@@ -1,30 +1,28 @@
 # Name of the wandb run
-run_name: "Comparing CIFAR10 prototypes, old way"
+run_name: "Comparing prototypes "
 
 # List of the each first new model's name. 
 #New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
-model_names: [/NFR_CIFAR10_100_100percent_15epochs:v102, 
-/50lambdaKLFocal_Distillation_CIFAR10_100_100percent_15epochs:v200,
-/50lambdaL2Focal_Distillation_CIFAR10_100_100percent_15epochs:v109]
+model_names: [/model_name:v0]
 
 # Features' dimension, if the dSimplex is used feat_dim = num_classes -1
-feat_dim : 3
+feat_dim : 256
 
 # Labels used in the graph for each group of models
-labels : ['Regular Training', 'FD KL', 'FD L2']
+labels : ['model label']
 # Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
-colors : ['limegreen', 'firebrick', royalblue]
+colors : ['limegreen']
 
 # Number of models to compare 
-num_models: 100
+num_models: 10
 num_classes: 10
 
 # Old model's name
-old_model : /HalfBottleneck3CIFAR10_100_0_0_0_0_0percent_9.9epochs:v0
-old_num_classes : 10
+old_model : /old_model:v0
+old_num_classes : 5
 # The old model can be trained on less classes than the new model, these are the indices of the 
 # classes shared by all the models. Must be in ascending order
-old_model_classes_indices: [5,6,7,8,9]
+old_model_classes_indices: [0,1,2,3,4]
 
 # List of k that is going to be used
 k: [1,2,3]

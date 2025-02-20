@@ -29,8 +29,8 @@ hyp = {
 }
 
 """
-Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) between the prototypes, instead of features, of an old and multiple new models
-and calculate the cosine distance between them.
+Code that implements mutual knn-alignment (Appendix A of https://arxiv.org/abs/2405.07987) between the class prototypes, instead of features, 
+of an old and multiple new models and calculates the cosine distance between them.
 """
 
 def main():

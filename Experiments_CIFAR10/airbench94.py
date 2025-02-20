@@ -19,7 +19,6 @@ from torch import nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as T
-from torchvision.models import resnet18
 
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
@@ -391,9 +390,10 @@ def evaluate(model, loader, tta_level=0):
     return (logits.argmax(1) == loader.labels).float().mean().item()
 
 ############################################
-#            Easier model loading          #
+#              Useful functions            #
 ############################################
 
+# Easier model loading
 def load_trained_model(model_path, wandb_run, feat_dim, num_classes):
     """
     Load a trained model from a given path.
@@ -533,6 +533,7 @@ def main(model_name, run):
                     new_features = l2_norm(new_features)
                     old_features = extract_features(old_model, inputs)
                     old_features = l2_norm(old_features)
+
                     loss_CF = contr_feat_loss(old_features, new_features, labels, hyp['net']['num_classes'],
                                                hyp['net']['old_num_classes'], hyp['only_old'])
                     loss += hyp['lambda_f']*loss_CF # add contrastive features loss
@@ -542,6 +543,7 @@ def main(model_name, run):
                     new_prototypes = l2_norm(new_prototypes)
                     old_prototypes = old_model[-2].weight
                     old_prototypes = l2_norm(old_prototypes)
+
                     loss_CP = contr_proto_loss(old_prototypes, new_prototypes)
                     loss += hyp['lambda_p']*loss_CP # add contrastive prototypes loss
                 if hyp['CPL']: 
@@ -550,6 +552,7 @@ def main(model_name, run):
                     new_prototypes = l2_norm(new_prototypes)
                     old_prototypes = old_model[-2].weight
                     old_prototypes = l2_norm(old_prototypes)
+                    
                     loss_CPL = cosine_loss(old_prototypes, new_prototypes)
                     loss += hyp['lambda_cpl']*loss_CPL # add cosine prototypes loss
                 if hyp['FD']: # add focal distillation

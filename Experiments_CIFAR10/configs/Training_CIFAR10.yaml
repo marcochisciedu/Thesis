@@ -1,8 +1,8 @@
 # Name of the trained model
-model_name : Big_features_Regular_Training
+model_name : New model name
 
 # Number of models that are going to be trained
-num_models : 100
+num_models : 10
 # percentage of CIFAR10 to use
 percentage : 100
 
@@ -25,7 +25,7 @@ dSimplex : False
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model : /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_model : /old_model_name:v0
 old_num_classes : 5
 
 loss: 'default'

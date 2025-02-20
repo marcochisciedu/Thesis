@@ -1,5 +1,5 @@
 # Name of the trained model
-model_name : 'Test'
+model_name : New model name
 
 # Number of models that are going to be trained
 num_models : 10
@@ -25,7 +25,7 @@ dSimplex : False
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model : /New_stuff_first_5_classes_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_model : /old_model_name:v0
 old_num_classes : 5
 
 loss: 'New stuff'

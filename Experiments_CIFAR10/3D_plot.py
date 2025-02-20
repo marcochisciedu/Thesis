@@ -26,7 +26,7 @@ hyp = {
 }
 
 """
-Code that prints the given model's prototypes in 3D. Can print them showing their convex hull or with the features
+Code that prints the model's class prototypes in 3D. Can print them showing their convex hull or with the features
 of all the images of a chosen class highlighting the negative flips.
 """
 

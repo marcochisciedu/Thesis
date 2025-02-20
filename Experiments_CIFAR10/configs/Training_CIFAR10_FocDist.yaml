@@ -1,8 +1,8 @@
 # Name of the trained model
-model_name : Big_features_KL_lambda_50
+model_name : New_model_name
 
 # Number of models that are going to be trained
-num_models : 100
+num_models : 10
 # percentage of CIFAR10 to use
 percentage : 100
 
@@ -25,13 +25,13 @@ dSimplex : False
 
 # If NFR is going to be calculated after each epoch
 nfr: True
-old_model : /Big_features_First_5_Classes_CIFAR10_CIFAR10_100_0_0_0_0_0percent_9epochs:v0
+old_model : /old_model_name:v0
 old_num_classes : 5
 
 loss: 'Focal Distillation'
 fd_alpha : 1
 fd_beta : 5
 focus_type : 'old_correct'
-distillation_type : 'kl'
+distillation_type : 'l2'
 kl_temperature : 100
 lambda : 50
