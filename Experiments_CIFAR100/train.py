@@ -104,12 +104,6 @@ def define_hyp(loaded_params):
         hyp['CPL'] = loaded_params['CPL']
         if hyp['CPL']:
             hyp['lambda_cpl']= loaded_params['lambda_cpl']
-        hyp['PACE'] = loaded_params['PACE']
-        if hyp['PACE']:
-            hyp['lambda_pa'] = loaded_params['lambda_pa']
-            hyp['k'] = loaded_params['k']
-            hyp['guide_model'] = loaded_params['guide_model']
-            hyp['num_guide_models'] = loaded_params['num_guide_models'] 
     if (hyp['loss'] == 'Focal Distillation') or FD:
         hyp['fd']['fd_alpha'] = loaded_params['fd_alpha']
         hyp['fd']['fd_beta'] = loaded_params['fd_beta']
@@ -291,19 +285,7 @@ def main():
         # Set up training
         optimizer = optim.SGD(model.parameters(), lr=hyp['opt']['lr'], momentum=hyp['opt']['momentum'], weight_decay=hyp['opt']['weight_decay'])
         train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=hyp['opt']['milestones'], gamma=0.2) #learning rate decay
-        if (hyp['loss'] == 'New stuff')& hyp['PACE']:
-            knn_matrix = np.zeros((hyp['data']['num_classes'], hyp['data']['num_classes']))
-            for i in range(hyp['num_guide_models']):
-                current_guide_model_name =  hyp['guide_model'].split(":v")[0]+":v"+str(i+int(hyp['guide_model'].split(":v")[1]))
-                guide_model = create_model(hyp['net']['backbone'], False, hyp['net']['feat_dim'], hyp['data']['num_classes'], 
-                                        device, WANDB_PROJECT+current_guide_model_name, wandb_run )
-                W_guide= guide_model.fc2.weight.detach().cpu().numpy().astype(np.float32)
-                knn_matrix += calculate_knn_matrix(W_guide, hyp['k'])
-            knn_matrix= (knn_matrix >= (hyp['num_guide_models']/ 2)).astype(int)
-            knn_matrix= torch.from_numpy(knn_matrix).float().cuda()
-            loss = ProximityAwareCrossEntropyLoss(knn_matrix, hyp['lambda_pa'])
-        else:
-            loss = nn.CrossEntropyLoss()
+        loss = nn.CrossEntropyLoss()
 
         best_acc = 0
         for epoch in range(1, hyp['opt']['train_epochs'] + 1):
