@@ -43,6 +43,7 @@ class Incremental_ResNet(nn.Module):
         if self.out_dim != self.feat_size:
             print(f"add a linear layer from {self.out_dim} to {self.feat_size}")
             self.fc1 = nn.Linear(self.out_dim, self.feat_size, bias=False)
+            self.relu = nn.ReLU()
         self.fc2 = nn.Linear(self.feat_size, num_classes, bias=False)  # classifier
         
             
@@ -51,11 +52,11 @@ class Incremental_ResNet(nn.Module):
 
         if self.fc1 is not None:
             z = self.fc1(x)
+            y = self.fc2(self.relu(z))
         else:
             z = x
-        
-        y = self.fc2(z)
-
+            y = self.fc2(z)
+         
         if return_dict:
             return {'backbone_features': x,
                     'logits': y, 
