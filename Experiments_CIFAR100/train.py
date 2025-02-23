@@ -15,7 +15,6 @@ sys.path.append(os.path.abspath(os.path.join('..', 'Thesis')))
 from negative_flip import *
 from NFR_losses import *
 from fixed_classifiers import *
-from features_alignment import calculate_knn_matrix
 torch.backends.cudnn.benchmark = True
 
 """

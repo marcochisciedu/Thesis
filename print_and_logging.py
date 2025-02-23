@@ -8,7 +8,7 @@ import numpy as np
 Useful code to print and log to wandb dataframes as heatmaps or bar plots
 """
 
-# Simple function that prints and log a dataframe and a figure given their title
+# Simple function that prints and logs a dataframe and a figure given their title
 def print_and_log(df, fig, title):
     print(title+ f":\n {df}")
     wandb.log({title: wandb.Image(fig)})
@@ -36,7 +36,7 @@ def df_plot_heatmap(matrix, classes, title, cmap, fmt, xlabel, ylabel, center=No
         fig = None
     return df, fig
 
-# Simple function that creates the a bar plot figure from a list of values
+# Simple function that creates a bar plot figure from a list of values
 def bar_plot(list, tick_labels, colors, title, xlabel, ylabel, ylim, yerr = None):
     array = np.array(list)
     x = np.arange(len(tick_labels))

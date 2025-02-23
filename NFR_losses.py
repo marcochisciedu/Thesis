@@ -109,7 +109,7 @@ class ContrastiveFeaturesLoss(nn.Module):
 
     def _loss(self, feat_old, feat_new, labels, new_cls_num, old_cls_num, only_old):
         """Calculates infoNCE loss on the features extracted by the old and new model.
-            The embedding size should be the same
+            The embedding size should be the same.
         Args:
             feat_old:
                 features extracted with the old model.
@@ -129,7 +129,7 @@ class ContrastiveFeaturesLoss(nn.Module):
         Returns:
             Mean loss over the mini-batch.
         """
-        # Select only features of images that belong to the old classes
+        # Select only features of images that belong to the old classes if only old is True
         if (old_cls_num != new_cls_num) & only_old:
             mask = labels < min(new_cls_num, old_cls_num) # mask samples belong to new classes
             labels = labels[mask]
@@ -167,7 +167,7 @@ class ContrastivePrototypeLoss(nn.Module):
 
     def _loss(self, prototype_old, prototype_new):
         """Calculates infoNCE loss on the class prototypes of the old and new model.
-        The embedding size should be the same
+        The embedding size should be the same.
 
         Args:
             prototype_old:
@@ -182,12 +182,13 @@ class ContrastivePrototypeLoss(nn.Module):
             prototype_old = prototype_old[:min(prototype_old.shape[0], prototype_new.shape[0])]
             prototype_new = prototype_new[:min(prototype_old.shape[0], prototype_new.shape[0])]
 
-        ## create diagonal mask that only selects similarities between
+        ## Create diagonal mask that only selects similarities between
         ## the same class prototype
         num_prototypes = prototype_old.shape[0]
         diag_mask = torch.eye(num_prototypes, device=prototype_old.device, dtype=torch.bool)
         sim_01 = torch.einsum("nc,mc->nm", prototype_old, prototype_new) *  self.tau
         positive_loss = -sim_01[diag_mask]
+
         # Get the other class prototypes
         sim_01 = (sim_01* (~diag_mask)).view(num_prototypes, -1)
         negative_loss_01 = torch.logsumexp(sim_01, dim=1)
@@ -205,7 +206,7 @@ class CosinePrototypeLoss(nn.Module):
 
     def _loss(self, prototype_old, prototype_new):
         """Calculates simple CosineEmbeddingLoss between the class prototypes of the old and new model.
-        The embedding size should be the same
+        The embedding size should be the same.
 
         Args:
             prototype_old:

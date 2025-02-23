@@ -43,7 +43,7 @@ class Incremental_ResNet(nn.Module):
         if self.out_dim != self.feat_size:
             print(f"add a linear layer from {self.out_dim} to {self.feat_size}")
             self.fc1 = nn.Linear(self.out_dim, self.feat_size, bias=False)
-            self.relu = nn.ReLU()
+            self.relu = nn.ReLU()          # add ReLU for numerical stability
         self.fc2 = nn.Linear(self.feat_size, num_classes, bias=False)  # classifier
         
             
@@ -67,7 +67,7 @@ class Incremental_ResNet(nn.Module):
             return x, y, z
 
 # Creates an Incremental ResNet given the backbone, if pretrained, feature size and num classes
-# If the model weights need to be loaded, load path needs to be "WANDB_PROJECT+model_path" and wandb_run cannot be None
+# If the model's weights need to be loaded, load path needs to be "WANDB_PROJECT+model_path" and wandb_run cannot be None
 def create_model(backbone, pretrained, feat_size, num_classes, device, load_path=None, wandb_run = None):
 
     print(f"Creating model with {num_classes} classes and {feat_size} features")

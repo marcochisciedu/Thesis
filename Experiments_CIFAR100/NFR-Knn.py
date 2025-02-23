@@ -25,7 +25,7 @@ hyp = {
     },
     'net': {
         'backbone': 'resnet18',         # resnet 18/34/50/101/152
-        'feat_dim' : 512,                 # features' dimension
+        'feat_dim' : 512,               # features' dimension
     },
     'data': {
         'num_classes': 100,
@@ -39,7 +39,7 @@ hyp = {
 }
 
 """
-Code to search for the possible correlation between negative flip and the prototypes' Knn matrix 
+Code to search for the possible correlation between negative flip and the prototypes' Knn (K-Nearest Neighbors) matrix 
 """
 # Transfer each loaded parameter to the correct hyp parameter
 def define_hyp(loaded_params):
@@ -58,6 +58,41 @@ def define_hyp(loaded_params):
     hyp['k'] = loaded_params['k']
 
     hyp['dSimplex'] = loaded_params['dSimplex']
+
+# Simple function that stores all the errors of a model
+def calculate_all_errors_flips(model, test_loader, dict_output = False):
+    flips ={}
+    errors= 0
+
+    model.eval()
+
+    with torch.no_grad():
+        for data in test_loader:
+            inputs, labels = data
+
+            # Get both models outputs
+            if dict_output:
+                labels = labels.cuda()
+                inputs = inputs.cuda()
+
+                logits = model(inputs)['logits']
+            else:
+                logits = model(inputs)
+
+            output = logits.argmax(1)
+
+            # Count the errors
+            errors += (output != labels).sum().item()
+
+            # For each error store and count each flip, from correct label to incorrect prediction
+            errors_indices = (output != labels).nonzero()
+            for index in errors_indices:
+                if (labels[index].item(), output[index].item()) in flips:
+                    flips[(labels[index].item(), output[index].item())] += 1
+                else: 
+                    flips[(labels[index].item(), output[index].item())] = 1
+
+    return  flips, errors
 
 def main():
 
@@ -91,6 +126,10 @@ def main():
         config=hyp)
     
     classes = CIFAR100_CLASSES
+    
+    # Get the complete test dataloader to check all the errors
+    _, cifar100_test_loader = create_dataloaders('cifar100', DATASET_PATH, hyp['opt']['batch_size'], subset_list= hyp['data']['subset_list'])
+
     # Get the correct dataset to test the NFR
     _, cifar100_nfr_test_loader = create_dataloaders('cifar100', DATASET_PATH,hyp['opt']['batch_size'],subset_list= hyp['data']['old_subset_list'])
     
@@ -99,14 +138,15 @@ def main():
                                     device, WANDB_PROJECT+hyp['old_model_name'], wandb_run )
 
     knn_matrices = []
-    flip_matrices, flip_per_mat, nfr_adj_matrices  = [], [], []
-    impr_flip_matrices, impr_flip_per_mat, impr_nfr_adj_matrices  = [], [], []
+    flip_matrices, flip_per_mat, nfr_knn_matrices  = [], [], []
+    impr_flip_matrices, impr_flip_per_mat, impr_nfr_knn_matrices  = [], [], []
+    errors_knn_matrices = []
 
     for i in range(hyp['num_models']):
         # Get model with better performances
         if hyp['num_models'] > 1:
             current_model_name = new_model_name.split(":v")[0]+":v"+str(i+int(new_model_name.split(":v")[1]))
-            display_all = False  # do not display each knn matrix
+            display_all = False  # do not display every knn matrix
         else:
             current_model_name = new_model_name
             display_all = True
@@ -145,7 +185,7 @@ def main():
         else: 
             flip_matrices.append(flips_df.to_numpy())
             flip_per_mat.append(flips_df_per.to_numpy())
-            nfr_adj_matrices.append(df_nfr_knn.to_numpy())
+            nfr_knn_matrices.append(df_nfr_knn.to_numpy())
 
         # Same as before but with the improved NFR
         improved_nfr, impr_flips, impr_num_flips = improved_negative_flip_rate(model_v1, model_v2, cifar100_nfr_test_loader, dict_output= True)
@@ -163,11 +203,19 @@ def main():
         else: 
             impr_flip_matrices.append(impr_flips_df.to_numpy())
             impr_flip_per_mat.append(impr_flips_df_per.to_numpy())
-            impr_nfr_adj_matrices.append(impr_df_nfr_knn.to_numpy())
+            impr_nfr_knn_matrices.append(impr_df_nfr_knn.to_numpy())
         
         nfr_metrics = {'NFR': nfr, 'improved_NFR': improved_nfr,
                         'Relative NFR':relative_nfr , 'Improved relative NFR':improved_relative_nfr}
         wandb.log({**nfr_metrics})
+
+        # Calculate the general errors and connect them to the knn matrix 
+        error_flips, num_errors = calculate_all_errors_flips(model_v2, cifar100_test_loader, dict_output= True)
+        _, errors_df, _, _ = flips_heatmap(error_flips, num_errors, classes, display=display_all,
+                                              figsize=( 20, 14), annot = False )
+        _, df_errors_knn = link_NFR_adjacency(errors_df, df_knn_v2,  display=display_all,
+                                              figsize=( 20, 14), annot = False )
+        errors_knn_matrices.append(df_errors_knn)
     if hyp['num_models']>1:
         #Calculate and show the sum of all the knn matrices
         df_sum_knn, df_sum_per_knn, fig_sum_knn, fig_per_knn= knn_matrices_sum(np.array(knn_matrices), classes, figsize=( 20, 14), annot = False)
@@ -183,7 +231,7 @@ def main():
         df_mean_flip_per, fig_mean_flip_per= df_plot_heatmap(mean_flip_per_mat, classes, 'Mean percentage of negative flips', 'Purples',
                                                               '.1f', "New prediction", "Old predictions", figsize=( 20, 14), annot = False)
         print_and_log(df_mean_flip_per, fig_mean_flip_per,"Mean heatmap of the negative flips' percentage between classes")
-        neg_per, pos_per = summary_nfr_adj(nfr_adj_matrices, classes,  figsize=( 20, 14), annot = False)
+        neg_per, pos_per = summary_nfr_adj(nfr_knn_matrices, classes,  figsize=( 20, 14), annot = False)
         
         # Same code but with the improved NFR
         mean_impr_flip_mat = np.mean(np.array(impr_flip_matrices), axis = 0)
@@ -194,12 +242,17 @@ def main():
         df_mean_impr_flip_per, fig_mean_impr_flip_per= df_plot_heatmap(mean_impr_per_flip_mat, classes, 'Mean percentage of improved negative flips', 'Purples', '.1f',
                                                                        "New prediction", "Old predictions", figsize=( 20, 14), annot = False)
         print_and_log(df_mean_impr_flip_per, fig_mean_impr_flip_per,"Mean heatmap of the improved negative flips' percentage between classes")
-        impr_neg_per, impr_pos_per= summary_nfr_adj(impr_nfr_adj_matrices, classes, impr = "Improved",  figsize=( 20, 14), annot = False)
+        impr_neg_per, impr_pos_per= summary_nfr_adj(impr_nfr_knn_matrices, classes, impr = "Improved",  figsize=( 20, 14), annot = False)
         
+        # Calculate percentage of general errors that end up in classes near the original label
+        errors_neg_per, errors_pos_per = summary_nfr_adj(errors_knn_matrices, classes,  figsize=( 20, 14), annot = False)
+
         per_metrics = {'Far classes negative flips percentage': neg_per,
                         'Near negative flips percentage' : pos_per,
                         'Far classes improved negative flips percentage': impr_neg_per,
-                        'Near improved negative flips percentage' : impr_pos_per}
+                        'Near improved negative flips percentage' : impr_pos_per,
+                        'Far classes general errors percentage': errors_neg_per,
+                        'Near general errors percentage' : errors_pos_per}
         wandb.log({**per_metrics})
         
     wandb_run.finish()
