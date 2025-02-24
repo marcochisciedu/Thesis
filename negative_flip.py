@@ -18,7 +18,7 @@ def negative_flip_rate(model_v1, model_v2, test_loader, dict_output = False):
             inputs, labels = data
 
             # Get both models outputs
-            if dict_output:
+            if dict_output:    #if the model outputs a dictionary or just logits
                 labels = labels.cuda()
                 inputs = inputs.cuda()
 
@@ -60,7 +60,7 @@ def improved_negative_flip_rate(model_v1, model_v2, test_loader, dict_output = F
             inputs, labels = data
 
             # Get both models outputs
-            if dict_output:
+            if dict_output:     #if the model outputs a dictionary or just logits
                 labels = labels.cuda()
                 inputs = inputs.cuda()
                 
@@ -88,7 +88,7 @@ def improved_negative_flip_rate(model_v1, model_v2, test_loader, dict_output = F
     
     return (negative_flips/total), flips, negative_flips
 
-# Calculate the relative NFR given a NFR (normal or improved) and the accuracies 
-# of the two compared models
+# Calculate the relative NFR given a NFR (normal or improved) and the accuracies on the old dataset
+# of the two compared models. 
 def relative_negative_flip_rate(neg_flip_rate, accuracy_old, accuracy_new):
     return neg_flip_rate/(accuracy_old*(1-accuracy_new))
