@@ -103,13 +103,7 @@ def main():
         wandb.log({"3d plot with "+ classes[hyp['class_index']]+ " features and nfr" : wandb.Plotly(vect_feat_fig)})
         wandb.log({"3d plot with "+ classes[hyp['class_index']]+ " features and improved nfr" : wandb.Plotly(impr_vect_feat_fig)})
     else:
-        fig = vector_plot(W, classes, add_convex_hull=hyp['add_convex_hull'])
-        if hyp['add_convex_hull']:
-            fig.write_image("CIFAR-10 3D plot with convex hull.pdf")
-        else:
-            fig.write_image("CIFAR-10 3D plot.pdf")
-        wandb.log({"3d plot classes' prototypes and convex hull" : wandb.Plotly(fig)})
-
+        vector_plot_geodesic(W, classes)
 
     wandb_run.finish()
     
