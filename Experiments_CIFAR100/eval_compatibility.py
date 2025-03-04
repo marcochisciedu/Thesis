@@ -81,10 +81,10 @@ def main():
 
     device = torch.device("cuda:0")
 
-    print("Softmax Evaluate compatibility with projection "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
+    print("Features Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0])
     wandb_run=wandb.init(
         project=WANDB_PROJECT,
-        name = "Half dataset Features Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
+        name = "Features Evaluate compatibility "+ hyp['gallery_model_name'].split(":v")[0]+ "&"+hyp['query_model_name'].split(":v")[0],
         config=hyp)
 
     # Get the whole CIFAR100 dataset

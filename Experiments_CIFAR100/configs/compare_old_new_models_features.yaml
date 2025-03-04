@@ -1,22 +1,19 @@
 # Name of the wandb run
-run_name: "Resnet34 Comparing models features CIFAR100 k 20 batch size 128"
+run_name: "run name"
 
 # List of the each first new model's name. 
 #New models have to be named as: /model_name:v_num where num is in [first_num, first_num+num_models]
-model_names: [/Resnet34_Training_full_CIFAR100:v0, 
-/Resnet34_Training_FD_KL_lambda_1_full_CIFAR100:v0,
-/Resnet34_Training_FD_KL_lambda_1_full_CIFAR100_neg-flip:v0,
-/Resnet34_Training_FD_L2_lambda_0.6_full_CIFAR100_neg-flip:v0]
+model_names: [ /model_name:v0, /model_name:v0]
 
 # Labels used in the graph for each group of models
-labels : ['Regular Training', 'Foc Dist KL', 'FD Kl neg-flip', 'FD L2 neg-flip']
+labels : [ 'First label', 'Second label']
 # Colors used in the graph for each group of models, es: 'firebrick', 'royalblue' , 'limegreen'
-colors : ['limegreen',  'royalblue', 'cornflowerblue', 'firebrick']
+colors : [ 'royalblue', 'limegreen']
 # Testing dataloader's batch size
-batch_size : 128
+batch_size : 256
 
 # ResNet parameters
-backbone: 'resnet34'
+backbone: 'resnet18'
 feat_dim : 512
 
 # Dataset parameters
@@ -27,8 +24,8 @@ subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), Non
 num_models: 5
 
 # Name of the old model and subset of classes it was trained on
-old_model_name : /Re-Training_full_CIFAR100:v0
-old_subset_list: [0,100,1]
+old_model_name : /old_model_name:v0
+old_subset_list: [0,50,1]
 old_backbone: 'resnet18'  #backbone of the old model
 old_feat_dim: 512
 

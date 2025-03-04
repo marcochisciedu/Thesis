@@ -1,4 +1,4 @@
-wandb_name: "Resnet50 Training FD KL lambda 1 full CIFAR100"
+wandb_name: "Resnet18 CIFAR100 FD"
 
 # Training hyperparameters
 train_epochs : 200
@@ -9,8 +9,8 @@ momentum : 0.9
 weight_decay : 5.0e-4
 
 # ResNet parameters
-backbone: 'resnet50'
-feat_dim : 2048
+backbone: 'resnet18'
+feat_dim : 512
 pretrained : False
 
 # Dataset parameters
@@ -18,26 +18,26 @@ num_classes : 100
 subset_list : null    #es: list [0,50,1] corresponds to list(range(0,50,1)), null = all classes
 
 # Number of models that are going to be trained
-num_models : 1
+num_models : 5
 
 # Seed for reproducibility
-seed : 115
+seed : 111
 
 # If NFR is going to be calculated after each epoch
 nfr: True
 nfr_eval: 20    # after how many epochs to evaluate the NRF
-old_model_name : /Re-Training_full_CIFAR100:v0
-old_subset_list: [0,100,1]
+old_model_name : /old_model_name:v0
+old_subset_list: [0,50,1]
 old_backbone: 'resnet18'  #backbone of the old model
-old_feat_dim: 512
+old_feat_dim: 32
 
 loss: 'Focal Distillation'
 fd_alpha : 1
 fd_beta : 5
-focus_type : 'old_correct'
-distillation_type : 'kl'
+focus_type : 'neg_flip'    #'old_correct' or 'neg_flip'
+distillation_type : 'l2'   #'l2' or 'kl'
 kl_temperature : 100
-lambda : 1
+lambda : 0.2
 
 # If the classifier is a dSimplex
 dSimplex : False
