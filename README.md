@@ -13,7 +13,7 @@ pip install -r requirements.txt
 ## Repository Overview
 
 There are two directories:
- * [Experiments_CIFAR10/](./Experiments_CIFAR10/) contains the code for the initial experiment on the simpler CIFAR-10 dataset. Models were trained following the approach from https://github.com/KellerJordan/cifar10-airbench;
+ * [Experiments_CIFAR10](./Experiments_CIFAR10/) contains the code for the initial experiment on the simpler CIFAR-10 dataset. Models were trained following the approach from https://github.com/KellerJordan/cifar10-airbench;
  * [Experiments_CIFAR100](./Experiments_CIFAR10/) contains the code for more complex experiments conducted on the CIFAR-100 dataset;
 
 
