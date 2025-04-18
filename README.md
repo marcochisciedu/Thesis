@@ -18,7 +18,10 @@ There are two directories:
 
 
 [NFR_losses](.NFR_losses.py) implements various loss functions designed to reduce negative flips.
+
 [compatibility_eval](.compatibility_eval.py) provides tools for evaluating backward compatibility between models.
+
 [features_alignment](.features_alignment.py) contains code to compare image features, class prototypes or adjacency matrices.
+
 [negative_flip](negative_flip.py) computes negative flips during model updates.
 
