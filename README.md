@@ -1,7 +1,7 @@
 # <a id="title"> Mitigating Negative Flips in Model Updates by Compatible Representation Learning
 </a>
 
-This repository contains the code used in the experiments for my thesis:: <br>
+This repository contains the code used in the experiments for my thesis: <br>
 **Mitigating Negative Flips in Model Updates by Compatible Representation Learning** <br>
 
 ## Requirements
